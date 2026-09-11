@@ -23460,5 +23460,141 @@
       }
     },
     "isTie": false
+  },
+  {
+    "gamePk": "20260911KTLT0",
+    "gameDate": "2026-09-11T18:30:00+09:00",
+    "officialDate": "2026-09-11",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2002,
+          "name": "KT Wiz",
+          "abbrev": "KT",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 7,
+        "isWinner": true
+      },
+      "home": {
+        "team": {
+          "id": 2007,
+          "name": "Lotte Giants",
+          "abbrev": "LOT",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 1,
+        "isWinner": false
+      }
+    },
+    "isTie": false
+  },
+  {
+    "gamePk": "20260911NCHH0",
+    "gameDate": "2026-09-11T18:30:00+09:00",
+    "officialDate": "2026-09-11",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2004,
+          "name": "NC Dinos",
+          "abbrev": "NC",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 9,
+        "isWinner": true
+      },
+      "home": {
+        "team": {
+          "id": 2010,
+          "name": "Hanwha Eagles",
+          "abbrev": "HAN",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 7,
+        "isWinner": false
+      }
+    },
+    "isTie": false
+  },
+  {
+    "gamePk": "20260911SKHT0",
+    "gameDate": "2026-09-11T18:30:00+09:00",
+    "officialDate": "2026-09-11",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2005,
+          "name": "SSG Landers",
+          "abbrev": "SSG",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 2,
+        "isWinner": false
+      },
+      "home": {
+        "team": {
+          "id": 2001,
+          "name": "KIA Tigers",
+          "abbrev": "KIA",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 5,
+        "isWinner": true
+      }
+    },
+    "isTie": false
+  },
+  {
+    "gamePk": "20260911WOSS0",
+    "gameDate": "2026-09-11T18:30:00+09:00",
+    "officialDate": "2026-09-11",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2009,
+          "name": "Kiwoom Heroes",
+          "abbrev": "KIW",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 4,
+        "isWinner": false
+      },
+      "home": {
+        "team": {
+          "id": 2008,
+          "name": "Samsung Lions",
+          "abbrev": "SAM",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 6,
+        "isWinner": true
+      }
+    },
+    "isTie": false
   }
 ]
