@@ -1,0 +1,38 @@
+name: Update KBO Schedule Data
+
+on:
+  schedule:
+    # 15:30 UTC daily = 00:30 KST (nightly after games finish)
+    - cron: '30 15 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scrape-kbo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run KBO Scraper
+        run: node scripts/scrapeKBO.js --season 2026
+
+      - name: Commit and push if updated
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet data/; then
+            git add data/
+            git commit -m "Update KBO 2026 regular season data [skip ci]"
+            git push
+            echo "Successfully committed and pushed updated KBO data."
+          else
+            echo "No data changes detected. Everything is up to date."
+          fi

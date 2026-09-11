@@ -1,0 +1,14 @@
+{
+  "name": "kbo-data",
+  "version": "1.0.0",
+  "description": "Automated regular season schedule and results pipeline for Korea Baseball Organization (KBO)",
+  "type": "module",
+  "main": "scripts/scrapeKBO.js",
+  "scripts": {
+    "scrape": "node scripts/scrapeKBO.js",
+    "scrape:force": "node scripts/scrapeKBO.js --force"
+  },
+  "keywords": ["kbo", "baseball", "korea-baseball-organization", "schedule", "data"],
+  "author": "Dent Earl",
+  "license": "MIT"
+}
