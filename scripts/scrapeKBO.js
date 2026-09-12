@@ -400,25 +400,60 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
     console.log(`  💾 [Written] ${path.relative(rootDir, targetFile)} (${(serializedData.length / 1024).toFixed(1)} KB)`);
   });
 
+  // If src/data/kbo exists, also keep the embedded JS file in sync for file:// protocol support
+  const embeddedJsTarget = path.join(srcDataDir, `${season}.js`);
+  if (fs.existsSync(srcDataDir)) {
+    const jsContent = `/**
+ * Embedded ${season} KBO Schedule & Results Dataset
+ * Enables zero-server local execution (file:/// protocol) without CORS restrictions.
+ */
+(function() {
+  const games = ${serializedData};
+  if (typeof window !== "undefined") {
+    window.KBO_STATIC_DATA = window.KBO_STATIC_DATA || {};
+    window.KBO_STATIC_DATA["${season}"] = games;
+  }
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = games;
+  }
+})();
+`;
+    if (fs.existsSync(embeddedJsTarget) && fs.readFileSync(embeddedJsTarget, 'utf-8') === jsContent) {
+      console.log(`  ✨ [No Diff] ${path.relative(rootDir, embeddedJsTarget)} is already up to date.`);
+    } else {
+      fs.writeFileSync(embeddedJsTarget, jsContent, 'utf-8');
+      console.log(`  💾 [Written] ${path.relative(rootDir, embeddedJsTarget)} (${(jsContent.length / 1024).toFixed(1)} KB)`);
+    }
+  }
+
   return allGames;
 }
 
 // CLI Execution entry point
 if (process.argv[1] && process.argv[1].endsWith('scrapeKBO.js')) {
   const args = process.argv.slice(2);
-  let season = '2026';
+  let seasons = ['2026'];
   let forceRefresh = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--season' && args[i + 1]) {
-      season = args[i + 1];
+      seasons = [args[i + 1]];
       i++;
+    } else if (args[i] === '--seasons' && args[i + 1]) {
+      seasons = args[i + 1].split(',').map(s => s.trim()).filter(Boolean);
+      i++;
+    } else if (args[i] === '--all') {
+      seasons = ['2021', '2022', '2023', '2024', '2025', '2026'];
     } else if (args[i] === '--force' || args[i] === '--no-cache') {
       forceRefresh = true;
     }
   }
 
-  scrapeKboSeason(season, { forceRefresh })
+  (async () => {
+    for (const yr of seasons) {
+      await scrapeKboSeason(yr, { forceRefresh });
+    }
+  })()
     .then(() => {
       console.log('\n✅ KBO data extraction complete.');
       process.exit(0);
