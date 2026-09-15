@@ -426,7 +426,72 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
     }
   }
 
+  // Save scrape metadata with timestamp
+  saveScrapeMetadata(rootDir, 'kbo', season, allGames);
+
   return allGames;
+}
+
+/**
+ * Writes data/<league>/metadata.json and updates src/constants/scrapeMeta.js if present
+ */
+function saveScrapeMetadata(rootDir, league, season, games) {
+  const now = new Date();
+  let ptString = '';
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
+    const parts = formatter.formatToParts(now);
+    const getP = t => parts.find(p => p.type === t)?.value || '';
+    ptString = `${getP('year')}-${getP('month')}-${getP('day')} ${getP('hour')}:${getP('minute')} PT`;
+  } catch (e) {
+    ptString = now.toISOString();
+  }
+
+  const metaObj = {
+    league,
+    season: String(season),
+    lastUpdated: now.toISOString(),
+    lastUpdatedPT: ptString,
+    lastScraped: now.toISOString(),
+    lastScrapedPT: ptString,
+    totalGames: Array.isArray(games) ? games.length : 0,
+    completedGames: Array.isArray(games) ? games.filter(g => g.status?.detailedState === 'Final').length : 0
+  };
+
+  const serialized = JSON.stringify(metaObj, null, 2);
+  const candidateDirs = [
+    path.join(rootDir, 'public', 'data', league),
+    path.join(rootDir, 'src', 'data', league),
+    path.join(rootDir, 'data', league)
+  ];
+
+  candidateDirs.forEach(dir => {
+    if (fs.existsSync(dir)) {
+      const metaPath = path.join(dir, 'metadata.json');
+      fs.writeFileSync(metaPath, serialized, 'utf-8');
+      console.log(`  ⏱️ [Metadata] ${path.relative(rootDir, metaPath)} (${ptString})`);
+    }
+  });
+
+  const scrapeMetaFile = path.join(rootDir, 'src', 'constants', 'scrapeMeta.js');
+  if (fs.existsSync(scrapeMetaFile)) {
+    try {
+      let content = fs.readFileSync(scrapeMetaFile, 'utf-8');
+      const lgRegex = new RegExp(`(${league}\\s*:\\s*{[\\s\\S]*?lastScraped:\\s*['"])([^'"]+)(['"])`);
+      if (lgRegex.test(content)) {
+        content = content.replace(lgRegex, `$1${ptString}$3`);
+      }
+      const isoRegex = new RegExp(`(${league}\\s*:\\s*{[\\s\\S]*?iso:\\s*['"])([^'"]+)(['"])`);
+      if (isoRegex.test(content)) {
+        content = content.replace(isoRegex, `$1${now.toISOString()}$3`);
+      }
+      fs.writeFileSync(scrapeMetaFile, content, 'utf-8');
+    } catch (e) {}
+  }
 }
 
 // CLI Execution entry point
