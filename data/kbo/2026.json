@@ -24786,5 +24786,107 @@
       }
     },
     "isTie": false
+  },
+  {
+    "gamePk": "20260923HTOB0",
+    "gameDate": "2026-09-23T18:30:00+09:00",
+    "officialDate": "2026-09-23",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2001,
+          "name": "KIA Tigers",
+          "abbrev": "KIA",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 2,
+        "isWinner": false
+      },
+      "home": {
+        "team": {
+          "id": 2006,
+          "name": "Doosan Bears",
+          "abbrev": "DOO",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 3,
+        "isWinner": true
+      }
+    },
+    "isTie": false
+  },
+  {
+    "gamePk": "20260923LTHH0",
+    "gameDate": "2026-09-23T18:30:00+09:00",
+    "officialDate": "2026-09-23",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2007,
+          "name": "Lotte Giants",
+          "abbrev": "LOT",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 9,
+        "isWinner": true
+      },
+      "home": {
+        "team": {
+          "id": 2010,
+          "name": "Hanwha Eagles",
+          "abbrev": "HAN",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 5,
+        "isWinner": false
+      }
+    },
+    "isTie": false
+  },
+  {
+    "gamePk": "20260923NCKT0",
+    "gameDate": "2026-09-23T18:30:00+09:00",
+    "officialDate": "2026-09-23",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2004,
+          "name": "NC Dinos",
+          "abbrev": "NC",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 10,
+        "isWinner": true
+      },
+      "home": {
+        "team": {
+          "id": 2002,
+          "name": "KT Wiz",
+          "abbrev": "KT",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 3,
+        "isWinner": false
+      }
+    },
+    "isTie": false
   }
 ]
