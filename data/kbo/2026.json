@@ -24990,5 +24990,109 @@
       }
     },
     "isTie": false
+  },
+  {
+    "gamePk": "20260925_LOT_DOO",
+    "gameDate": "2026-09-25T17:00:00+09:00",
+    "officialDate": "2026-09-25",
+    "status": {
+      "detailedState": "Postponed",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2007,
+          "name": "Lotte Giants",
+          "abbrev": "LOT",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": null,
+        "isWinner": false
+      },
+      "home": {
+        "team": {
+          "id": 2006,
+          "name": "Doosan Bears",
+          "abbrev": "DOO",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": null,
+        "isWinner": false
+      }
+    },
+    "isTie": false,
+    "isCancelled": true
+  },
+  {
+    "gamePk": "20260925_SAM_SSG",
+    "gameDate": "2026-09-25T17:00:00+09:00",
+    "officialDate": "2026-09-25",
+    "status": {
+      "detailedState": "Postponed",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2008,
+          "name": "Samsung Lions",
+          "abbrev": "SAM",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": null,
+        "isWinner": false
+      },
+      "home": {
+        "team": {
+          "id": 2005,
+          "name": "SSG Landers",
+          "abbrev": "SSG",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": null,
+        "isWinner": false
+      }
+    },
+    "isTie": false,
+    "isCancelled": true
+  },
+  {
+    "gamePk": "20260925HHNC0",
+    "gameDate": "2026-09-25T17:00:00+09:00",
+    "officialDate": "2026-09-25",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2010,
+          "name": "Hanwha Eagles",
+          "abbrev": "HAN",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 7,
+        "isWinner": false
+      },
+      "home": {
+        "team": {
+          "id": 2004,
+          "name": "NC Dinos",
+          "abbrev": "NC",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 8,
+        "isWinner": true
+      }
+    },
+    "isTie": false
   }
 ]
