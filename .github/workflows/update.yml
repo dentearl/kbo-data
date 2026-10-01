@@ -2,7 +2,11 @@ name: Update KBO Schedule Data
 
 on:
   schedule:
-    # 15:30 UTC daily = 00:30 KST (nightly after games finish)
+    # 09:00 UTC daily = 18:00 KST (weekend day games finish ~17:00-17:30 KST)
+    - cron: '0 9 * * *'
+    # 13:45 UTC daily = 22:45 KST (weekday night games finish ~21:30-22:00 KST)
+    - cron: '45 13 * * *'
+    # 15:30 UTC daily = 00:30 KST (late-night safety sweep for 12-inning games / rain delays)
     - cron: '30 15 * * *'
   workflow_dispatch:
 
