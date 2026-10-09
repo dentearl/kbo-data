@@ -26659,5 +26659,107 @@
       }
     },
     "isTie": false
+  },
+  {
+    "gamePk": "20261009HTNC0",
+    "gameDate": "2026-10-09T14:00:00+09:00",
+    "officialDate": "2026-10-09",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2001,
+          "name": "KIA Tigers",
+          "abbrev": "KIA",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 7,
+        "isWinner": true
+      },
+      "home": {
+        "team": {
+          "id": 2004,
+          "name": "NC Dinos",
+          "abbrev": "NC",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 2,
+        "isWinner": false
+      }
+    },
+    "isTie": false
+  },
+  {
+    "gamePk": "20261009LGLT0",
+    "gameDate": "2026-10-09T14:00:00+09:00",
+    "officialDate": "2026-10-09",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2003,
+          "name": "LG Twins",
+          "abbrev": "LG",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 1,
+        "isWinner": false
+      },
+      "home": {
+        "team": {
+          "id": 2007,
+          "name": "Lotte Giants",
+          "abbrev": "LOT",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 9,
+        "isWinner": true
+      }
+    },
+    "isTie": false
+  },
+  {
+    "gamePk": "20261009SSSK0",
+    "gameDate": "2026-10-09T14:00:00+09:00",
+    "officialDate": "2026-10-09",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2008,
+          "name": "Samsung Lions",
+          "abbrev": "SAM",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 1,
+        "isWinner": false
+      },
+      "home": {
+        "team": {
+          "id": 2005,
+          "name": "SSG Landers",
+          "abbrev": "SSG",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 3,
+        "isWinner": true
+      }
+    },
+    "isTie": false
   }
 ]
