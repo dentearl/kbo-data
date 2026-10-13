@@ -1,0 +1,250 @@
+{
+  "2026": {
+    "era": "kbo_stepladder",
+    "isStarted": false,
+    "isComplete": false,
+    "seeds": {
+      "1": {
+        "id": 2002,
+        "name": "KT Wiz",
+        "shortName": "Wiz"
+      },
+      "2": {
+        "id": 2008,
+        "name": "Samsung Lions",
+        "shortName": "Lions"
+      },
+      "3": {
+        "id": 2001,
+        "name": "KIA Tigers",
+        "shortName": "Tigers"
+      },
+      "4": {
+        "id": 2003,
+        "name": "LG Twins",
+        "shortName": "Twins"
+      },
+      "5": {
+        "id": 2006,
+        "name": "Doosan Bears",
+        "shortName": "Bears"
+      }
+    },
+    "wildCard": {
+      "name": "KBO Wild Card Series",
+      "format": "Best of 2 (+1 Adv)",
+      "team4": {
+        "id": 2003,
+        "name": "LG Twins",
+        "shortName": "Twins",
+        "wins": 1,
+        "isWinner": false,
+        "isEliminated": false,
+        "hasAdvantage": true
+      },
+      "team5": {
+        "id": 2006,
+        "name": "Doosan Bears",
+        "shortName": "Bears",
+        "wins": 0,
+        "isWinner": false,
+        "isEliminated": false
+      },
+      "isStarted": false,
+      "isComplete": false,
+      "games": [
+        {
+          "game": 1,
+          "date": "2026-10-14",
+          "away": "Doosan Bears",
+          "home": "LG Twins"
+        },
+        {
+          "game": 2,
+          "date": "2026-10-15",
+          "away": "Doosan Bears",
+          "home": "LG Twins",
+          "ifNeeded": true
+        }
+      ]
+    },
+    "semiPlayoff": {
+      "name": "KBO Semi-Playoff",
+      "format": "Best of 5",
+      "team3": {
+        "id": 2001,
+        "name": "KIA Tigers",
+        "shortName": "Tigers",
+        "wins": 0,
+        "isWinner": false,
+        "isEliminated": false
+      },
+      "adv": {
+        "name": "Wild Card Winner",
+        "shortName": "WC Winner",
+        "wins": 0,
+        "isWinner": false,
+        "isEliminated": false
+      },
+      "isStarted": false,
+      "isComplete": false,
+      "games": [
+        {
+          "game": 1,
+          "date": "2026-10-17",
+          "away": "Wild Card Winner",
+          "home": "KIA Tigers"
+        },
+        {
+          "game": 2,
+          "date": "2026-10-18",
+          "away": "Wild Card Winner",
+          "home": "KIA Tigers"
+        },
+        {
+          "game": 3,
+          "date": "2026-10-20",
+          "away": "KIA Tigers",
+          "home": "Wild Card Winner"
+        },
+        {
+          "game": 4,
+          "date": "2026-10-21",
+          "away": "KIA Tigers",
+          "home": "Wild Card Winner",
+          "ifNeeded": true
+        },
+        {
+          "game": 5,
+          "date": "2026-10-23",
+          "away": "Wild Card Winner",
+          "home": "KIA Tigers",
+          "ifNeeded": true
+        }
+      ]
+    },
+    "playoff": {
+      "name": "KBO Playoff",
+      "format": "Best of 5",
+      "team2": {
+        "id": 2008,
+        "name": "Samsung Lions",
+        "shortName": "Lions",
+        "wins": 0,
+        "isWinner": false,
+        "isEliminated": false
+      },
+      "adv": {
+        "name": "Semi-Playoff Winner",
+        "shortName": "Semi Winner",
+        "wins": 0,
+        "isWinner": false,
+        "isEliminated": false
+      },
+      "isStarted": false,
+      "isComplete": false,
+      "games": [
+        {
+          "game": 1,
+          "date": "2026-10-25",
+          "away": "Semi-Playoff Winner",
+          "home": "Samsung Lions"
+        },
+        {
+          "game": 2,
+          "date": "2026-10-26",
+          "away": "Semi-Playoff Winner",
+          "home": "Samsung Lions"
+        },
+        {
+          "game": 3,
+          "date": "2026-10-28",
+          "away": "Samsung Lions",
+          "home": "Semi-Playoff Winner"
+        },
+        {
+          "game": 4,
+          "date": "2026-10-29",
+          "away": "Samsung Lions",
+          "home": "Semi-Playoff Winner",
+          "ifNeeded": true
+        },
+        {
+          "game": 5,
+          "date": "2026-10-31",
+          "away": "Semi-Playoff Winner",
+          "home": "Samsung Lions",
+          "ifNeeded": true
+        }
+      ]
+    },
+    "koreanSeries": {
+      "name": "Korean Series",
+      "format": "Best of 7",
+      "team1": {
+        "id": 2002,
+        "name": "KT Wiz",
+        "shortName": "Wiz",
+        "wins": 0,
+        "isWinner": false,
+        "isEliminated": false
+      },
+      "adv": {
+        "name": "Playoff Winner",
+        "shortName": "PO Winner",
+        "wins": 0,
+        "isWinner": false,
+        "isEliminated": false
+      },
+      "isStarted": false,
+      "isComplete": false,
+      "games": [
+        {
+          "game": 1,
+          "date": "2026-11-02",
+          "away": "Playoff Winner",
+          "home": "KT Wiz"
+        },
+        {
+          "game": 2,
+          "date": "2026-11-03",
+          "away": "Playoff Winner",
+          "home": "KT Wiz"
+        },
+        {
+          "game": 3,
+          "date": "2026-11-05",
+          "away": "KT Wiz",
+          "home": "Playoff Winner"
+        },
+        {
+          "game": 4,
+          "date": "2026-11-06",
+          "away": "KT Wiz",
+          "home": "Playoff Winner"
+        },
+        {
+          "game": 5,
+          "date": "2026-11-07",
+          "away": "KT Wiz",
+          "home": "Playoff Winner",
+          "ifNeeded": true
+        },
+        {
+          "game": 6,
+          "date": "2026-11-09",
+          "away": "Playoff Winner",
+          "home": "KT Wiz",
+          "ifNeeded": true
+        },
+        {
+          "game": 7,
+          "date": "2026-11-10",
+          "away": "Playoff Winner",
+          "home": "KT Wiz",
+          "ifNeeded": true
+        }
+      ]
+    }
+  }
+}

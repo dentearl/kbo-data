@@ -6,10 +6,13 @@
  * (including tie/draw games and cancellations), and outputs production-grade JSON
  * for the baseball division race visualization.
  * 
- * Includes intelligent caching to prevent excessive network requests to KBO servers:
- * - Completed past months are cached permanently.
- * - Active / future months are cached with a configurable TTL (default 6 hours).
- * - Only writes output files when a genuine data diff is detected.
+ * 
+ * ARCHITECTURAL CONSTRAINT FOR AI AGENTS & DEVELOPERS:
+ * This scraper script is intentionally 100% self-contained with ZERO internal repository imports.
+ * It must ONLY import Node.js built-ins (node:fs, node:path, node:url).
+ * DO NOT import from ../src/ or couple this script to frontend constants.
+ * It is deployed and executed independently in standalone scraper repositories (e.g. kbo-data-repo).
+ * Parity between KBO_TEAM_MAPPING and src/constants/kboTeams.js is enforced by tests/scraperConsistency.test.js.
  */
 
 import fs from 'node:fs';
@@ -110,7 +113,7 @@ async function fetchMonthRaw(season, month, options = {}) {
 
   const formBody = new URLSearchParams({
     leId: '1',
-    srIdList: '0,9,6',
+    srIdList: '0,3,4,5,7,9,6',
     seasonId: String(season),
     gameMonth: month,
     teamId: ''
@@ -293,14 +296,313 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
 }
 
 /**
+ * Default scheduled 2026 KBO Stepladder Gauntlet Postseason structure.
+ */
+export function getDefault2026KboPostseasonData() {
+  return {
+    '2026': {
+      era: 'kbo_stepladder',
+      isStarted: false,
+      isComplete: false,
+      seeds: {
+        1: { id: 2002, name: 'KT Wiz', shortName: 'Wiz' },
+        2: { id: 2008, name: 'Samsung Lions', shortName: 'Lions' },
+        3: { id: 2001, name: 'KIA Tigers', shortName: 'Tigers' },
+        4: { id: 2003, name: 'LG Twins', shortName: 'Twins' },
+        5: { id: 2006, name: 'Doosan Bears', shortName: 'Bears' }
+      },
+      wildCard: {
+        name: 'KBO Wild Card Series',
+        format: 'Best of 2 (+1 Adv)',
+        team4: { id: 2003, name: 'LG Twins', shortName: 'Twins', wins: 1, isWinner: false, isEliminated: false, hasAdvantage: true },
+        team5: { id: 2006, name: 'Doosan Bears', shortName: 'Bears', wins: 0, isWinner: false, isEliminated: false },
+        isStarted: false,
+        isComplete: false,
+        games: [
+          { game: 1, date: '2026-10-14', away: 'Doosan Bears', home: 'LG Twins' },
+          { game: 2, date: '2026-10-15', away: 'Doosan Bears', home: 'LG Twins', ifNeeded: true }
+        ]
+      },
+      semiPlayoff: {
+        name: 'KBO Semi-Playoff',
+        format: 'Best of 5',
+        team3: { id: 2001, name: 'KIA Tigers', shortName: 'Tigers', wins: 0, isWinner: false, isEliminated: false },
+        adv: { name: 'Wild Card Winner', shortName: 'WC Winner', wins: 0, isWinner: false, isEliminated: false },
+        isStarted: false,
+        isComplete: false,
+        games: [
+          { game: 1, date: '2026-10-17', away: 'Wild Card Winner', home: 'KIA Tigers' },
+          { game: 2, date: '2026-10-18', away: 'Wild Card Winner', home: 'KIA Tigers' },
+          { game: 3, date: '2026-10-20', away: 'KIA Tigers', home: 'Wild Card Winner' },
+          { game: 4, date: '2026-10-21', away: 'KIA Tigers', home: 'Wild Card Winner', ifNeeded: true },
+          { game: 5, date: '2026-10-23', away: 'Wild Card Winner', home: 'KIA Tigers', ifNeeded: true }
+        ]
+      },
+      playoff: {
+        name: 'KBO Playoff',
+        format: 'Best of 5',
+        team2: { id: 2008, name: 'Samsung Lions', shortName: 'Lions', wins: 0, isWinner: false, isEliminated: false },
+        adv: { name: 'Semi-Playoff Winner', shortName: 'Semi Winner', wins: 0, isWinner: false, isEliminated: false },
+        isStarted: false,
+        isComplete: false,
+        games: [
+          { game: 1, date: '2026-10-25', away: 'Semi-Playoff Winner', home: 'Samsung Lions' },
+          { game: 2, date: '2026-10-26', away: 'Semi-Playoff Winner', home: 'Samsung Lions' },
+          { game: 3, date: '2026-10-28', away: 'Samsung Lions', home: 'Semi-Playoff Winner' },
+          { game: 4, date: '2026-10-29', away: 'Samsung Lions', home: 'Semi-Playoff Winner', ifNeeded: true },
+          { game: 5, date: '2026-10-31', away: 'Semi-Playoff Winner', home: 'Samsung Lions', ifNeeded: true }
+        ]
+      },
+      koreanSeries: {
+        name: 'Korean Series',
+        format: 'Best of 7',
+        team1: { id: 2002, name: 'KT Wiz', shortName: 'Wiz', wins: 0, isWinner: false, isEliminated: false },
+        adv: { name: 'Playoff Winner', shortName: 'PO Winner', wins: 0, isWinner: false, isEliminated: false },
+        isStarted: false,
+        isComplete: false,
+        games: [
+          { game: 1, date: '2026-11-02', away: 'Playoff Winner', home: 'KT Wiz' },
+          { game: 2, date: '2026-11-03', away: 'Playoff Winner', home: 'KT Wiz' },
+          { game: 3, date: '2026-11-05', away: 'KT Wiz', home: 'Playoff Winner' },
+          { game: 4, date: '2026-11-06', away: 'KT Wiz', home: 'Playoff Winner' },
+          { game: 5, date: '2026-11-07', away: 'KT Wiz', home: 'Playoff Winner', ifNeeded: true },
+          { game: 6, date: '2026-11-09', away: 'Playoff Winner', home: 'KT Wiz', ifNeeded: true },
+          { game: 7, date: '2026-11-10', away: 'Playoff Winner', home: 'KT Wiz', ifNeeded: true }
+        ]
+      }
+    }
+  };
+}
+
+/**
+ * Builds structured KBO postseason series from playoff events.
+ */
+export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [], season = '2026') {
+  const sStr = String(season);
+  const baseData = getDefault2026KboPostseasonData();
+  const seasonPostseason = baseData[sStr] || baseData['2026'];
+
+  if (!Array.isArray(postseasonGames) || postseasonGames.length === 0) {
+    return baseData;
+  }
+
+  const wcGames = [];
+  const semiGames = [];
+  const poGames = [];
+  const ksGames = [];
+
+  postseasonGames.forEach(g => {
+    const rawStage = (g.seriesType || g.series || g.stage || g.round || '').toLowerCase();
+    const rawAway = g.away || g.teams?.away?.team?.name || '';
+    const rawHome = g.home || g.teams?.home?.team?.name || '';
+    const awayTeam = resolveKboTeam(rawAway);
+    const homeTeam = resolveKboTeam(rawHome);
+    const srId = String(g.srId || '');
+
+    if (srId === '3' || rawStage.includes('wild') || rawStage.includes('wc') || rawStage.includes('와일드')) {
+      wcGames.push(g);
+    } else if (srId === '4' || rawStage.includes('semi') || rawStage.includes('준플레이')) {
+      semiGames.push(g);
+    } else if (srId === '5' || rawStage.includes('playoff') || rawStage.includes('po') || (rawStage.includes('플레이오프') && !rawStage.includes('준'))) {
+      poGames.push(g);
+    } else if (srId === '7' || rawStage.includes('korean') || rawStage.includes('ks') || rawStage.includes('한국시리즈')) {
+      ksGames.push(g);
+    } else {
+      const ids = [awayTeam?.id, homeTeam?.id].filter(Boolean);
+      if (ids.includes(2003) && ids.includes(2006)) {
+        wcGames.push(g);
+      } else if (ids.includes(2001)) {
+        semiGames.push(g);
+      } else if (ids.includes(2008)) {
+        poGames.push(g);
+      } else if (ids.includes(2002)) {
+        ksGames.push(g);
+      } else {
+        wcGames.push(g);
+      }
+    }
+  });
+
+  function processSeries(seriesObj, gamesList, winsNeeded, hasAdvantage = false, topTeamProp = 'team4', botTeamProp = 'team5') {
+    if (!seriesObj || gamesList.length === 0) return;
+    seriesObj.isStarted = true;
+    const parsedGames = [];
+    let winsTop = hasAdvantage ? 1 : 0;
+    let winsBot = 0;
+
+    const topTeam = seriesObj[topTeamProp];
+    const botTeam = seriesObj[botTeamProp];
+
+    gamesList.forEach((g, idx) => {
+      const rawAway = g.away || g.teams?.away?.team?.name || '';
+      const rawHome = g.home || g.teams?.home?.team?.name || '';
+      const awayTeam = resolveKboTeam(rawAway);
+      const homeTeam = resolveKboTeam(rawHome);
+      const awayName = awayTeam?.name || (typeof g.away === 'string' ? g.away : 'Away');
+      const homeName = homeTeam?.name || (typeof g.home === 'string' ? g.home : 'Home');
+      const awayScore = typeof g.awayScore === 'number' ? g.awayScore : (g.teams?.away?.score ?? null);
+      const homeScore = typeof g.homeScore === 'number' ? g.homeScore : (g.teams?.home?.score ?? null);
+      const isFinal = Boolean(g.isFinal || (g.status && (g.status.detailedState === 'Final' || g.status.abstractGameState === 'F')));
+
+      let winnerId = null;
+      if (isFinal && awayScore !== null && homeScore !== null) {
+        if (awayScore > homeScore) {
+          winnerId = awayTeam?.id || null;
+        } else if (homeScore > awayScore) {
+          winnerId = homeTeam?.id || null;
+        }
+      } else if (g.winnerId) {
+        winnerId = g.winnerId;
+      }
+
+      parsedGames.push({
+        game: idx + 1,
+        date: g.officialDate || g.date,
+        away: awayName,
+        home: homeName,
+        awayScore,
+        homeScore,
+        winnerId,
+        isFinal
+      });
+
+      const topId = topTeam?.id;
+      const botId = botTeam?.id;
+
+      if (winnerId && topId && winnerId === topId) winsTop++;
+      else if (winnerId && botId && winnerId === botId) winsBot++;
+      else if (winnerId && homeTeam && winnerId === homeTeam.id) winsTop++;
+      else if (winnerId && awayTeam && winnerId === awayTeam.id) winsBot++;
+    });
+
+    seriesObj.games = parsedGames;
+    if (topTeam) topTeam.wins = winsTop;
+    if (botTeam) botTeam.wins = winsBot;
+
+    if (winsTop >= winsNeeded) {
+      seriesObj.isComplete = true;
+      seriesObj.winnerId = topTeam?.id;
+      if (topTeam) topTeam.isWinner = true;
+      if (botTeam) botTeam.isEliminated = true;
+    } else if (winsBot >= winsNeeded) {
+      seriesObj.isComplete = true;
+      seriesObj.winnerId = botTeam?.id;
+      if (botTeam) botTeam.isWinner = true;
+      if (topTeam) topTeam.isEliminated = true;
+    }
+  }
+
+  processSeries(seasonPostseason.wildCard, wcGames, 2, true, 'team4', 'team5');
+
+  if (seasonPostseason.wildCard.isComplete && seasonPostseason.wildCard.winnerId) {
+    const wcWinnerId = seasonPostseason.wildCard.winnerId;
+    const wcWinner = wcWinnerId === 2001 ? seasonPostseason.wildCard.team4 : seasonPostseason.wildCard.team5;
+    if (seasonPostseason.semiPlayoff) {
+      seasonPostseason.semiPlayoff.adv = {
+        id: wcWinner.id,
+        name: wcWinner.name,
+        shortName: wcWinner.shortName || wcWinner.name,
+        wins: 0,
+        isWinner: false,
+        isEliminated: false
+      };
+      if (Array.isArray(seasonPostseason.semiPlayoff.games)) {
+        seasonPostseason.semiPlayoff.games.forEach(g => {
+          if (g.away === 'Wild Card Winner') g.away = wcWinner.name;
+          if (g.home === 'Wild Card Winner') g.home = wcWinner.name;
+        });
+      }
+    }
+  }
+
+  processSeries(seasonPostseason.semiPlayoff, semiGames, 3, false, 'team3', 'adv');
+
+  if (seasonPostseason.semiPlayoff.isComplete && seasonPostseason.semiPlayoff.winnerId) {
+    const semiWinnerId = seasonPostseason.semiPlayoff.winnerId;
+    const semiWinner = semiWinnerId === seasonPostseason.semiPlayoff.team3?.id ? seasonPostseason.semiPlayoff.team3 : seasonPostseason.semiPlayoff.adv;
+    if (seasonPostseason.playoff) {
+      seasonPostseason.playoff.adv = {
+        id: semiWinner.id,
+        name: semiWinner.name,
+        shortName: semiWinner.shortName || semiWinner.name,
+        wins: 0,
+        isWinner: false,
+        isEliminated: false
+      };
+      if (Array.isArray(seasonPostseason.playoff.games)) {
+        seasonPostseason.playoff.games.forEach(g => {
+          if (g.away === 'Semi-Playoff Winner') g.away = semiWinner.name;
+          if (g.home === 'Semi-Playoff Winner') g.home = semiWinner.name;
+        });
+      }
+    }
+  }
+
+  processSeries(seasonPostseason.playoff, poGames, 3, false, 'team2', 'adv');
+
+  if (seasonPostseason.playoff.isComplete && seasonPostseason.playoff.winnerId) {
+    const poWinnerId = seasonPostseason.playoff.winnerId;
+    const poWinner = poWinnerId === seasonPostseason.playoff.team2?.id ? seasonPostseason.playoff.team2 : seasonPostseason.playoff.adv;
+    if (seasonPostseason.koreanSeries) {
+      seasonPostseason.koreanSeries.adv = {
+        id: poWinner.id,
+        name: poWinner.name,
+        shortName: poWinner.shortName || poWinner.name,
+        wins: 0,
+        isWinner: false,
+        isEliminated: false
+      };
+      if (Array.isArray(seasonPostseason.koreanSeries.games)) {
+        seasonPostseason.koreanSeries.games.forEach(g => {
+          if (g.away === 'Playoff Winner') g.away = poWinner.name;
+          if (g.home === 'Playoff Winner') g.home = poWinner.name;
+        });
+      }
+    }
+  }
+
+  processSeries(seasonPostseason.koreanSeries, ksGames, 4, false, 'team1', 'adv');
+
+  if (seasonPostseason.koreanSeries.isComplete && seasonPostseason.koreanSeries.winnerId) {
+    seasonPostseason.championId = seasonPostseason.koreanSeries.winnerId;
+    seasonPostseason.isComplete = true;
+  }
+
+  return { [sStr]: seasonPostseason };
+}
+
+/**
+ * Updates KBO_POSTSEASON_DATA in src/constants/postseasonSeriesData.js with fresh results
+ */
+export function updateKboPostseasonSeriesDataConstant(rootDir, kbo2026Data) {
+  if (!kbo2026Data) return;
+  const targetFile = path.join(rootDir, 'src', 'constants', 'postseasonSeriesData.js');
+  if (!fs.existsSync(targetFile)) return;
+
+  try {
+    let content = fs.readFileSync(targetFile, 'utf-8');
+    const kboRegex = /(const\s+KBO_POSTSEASON_DATA\s*=\s*{[\s\S]*?'2026':\s*){[\s\S]*?}(\s*,\s*['"]2025['"])/;
+    if (kboRegex.test(content)) {
+      const indentedJson = JSON.stringify(kbo2026Data, null, 6)
+        .replace(/\n/g, '\n      ');
+      content = content.replace(kboRegex, `$1${indentedJson}$2`);
+      fs.writeFileSync(targetFile, content, 'utf-8');
+      console.log(`  🔄 [Updated] ${path.relative(rootDir, targetFile)} KBO_POSTSEASON_DATA['2026']`);
+    }
+  } catch (err) {
+    console.warn('  ⚠️ Could not update postseasonSeriesData.js for KBO:', err.message);
+  }
+}
+
+/**
  * Scrapes and compiles full KBO season into static JSON datasets
  */
 export async function scrapeKboSeason(season = '2026', options = {}) {
   const { forceRefresh = false } = options;
   console.log(`🇰🇷 Compiling KBO ${season} Regular Season Data...`);
 
-  // Months active in KBO regular season
-  const months = ['03', '04', '05', '06', '07', '08', '09', '10'];
+  // Months active in KBO regular season and postseason
+  const months = ['03', '04', '05', '06', '07', '08', '09', '10', '11'];
   const allGames = [];
 
   for (const month of months) {
@@ -426,6 +728,57 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
     }
   }
 
+  // Compile & Write Postseason Data
+  const sStr = String(season);
+  const postseasonData = parseKboPostseason([], allGames, sStr);
+  const serializedPostseason = JSON.stringify(postseasonData, null, 2);
+  const postseasonTargets = [];
+  if (fs.existsSync(path.join(rootDir, 'public'))) {
+    postseasonTargets.push(path.join(publicDir, 'postseason.json'));
+  }
+  if (fs.existsSync(path.join(rootDir, 'src'))) {
+    postseasonTargets.push(path.join(srcDataDir, 'postseason.json'));
+  }
+  if (postseasonTargets.length === 0 || fs.existsSync(standaloneDir)) {
+    postseasonTargets.push(path.join(standaloneDir, 'postseason.json'));
+  }
+
+  postseasonTargets.forEach(targetFile => {
+    const parent = path.dirname(targetFile);
+    if (!fs.existsSync(parent)) {
+      fs.mkdirSync(parent, { recursive: true });
+    }
+    fs.writeFileSync(targetFile, serializedPostseason, 'utf-8');
+    console.log(`  🏆 [Written] ${path.relative(rootDir, targetFile)} (${(serializedPostseason.length / 1024).toFixed(1)} KB)`);
+  });
+
+  // Write Postseason Embedded JS
+  if (fs.existsSync(srcDataDir)) {
+    const embeddedPostseasonJsTarget = path.join(srcDataDir, 'postseason.js');
+    const psJsContent = `/**
+ * Embedded KBO Postseason Series Dataset
+ * Enables zero-server local execution (file:/// protocol) without CORS restrictions.
+ */
+(function() {
+  const postseason = ${serializedPostseason};
+  if (typeof window !== "undefined") {
+    window.KBO_POSTSEASON_STATIC = postseason;
+    if (window.postseasonSeriesData && window.postseasonSeriesData.POSTSEASON_SERIES_DATA) {
+      window.postseasonSeriesData.POSTSEASON_SERIES_DATA.kbo = postseason;
+    }
+  }
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = postseason;
+  }
+})();
+`;
+    fs.writeFileSync(embeddedPostseasonJsTarget, psJsContent, 'utf-8');
+    console.log(`  🏆 [Written] ${path.relative(rootDir, embeddedPostseasonJsTarget)} (${(psJsContent.length / 1024).toFixed(1)} KB)`);
+  }
+
+  // Update src/constants/postseasonSeriesData.js with synced postseason results if file exists
+  updateKboPostseasonSeriesDataConstant(rootDir, postseasonData[sStr] || postseasonData['2026']);
+
   // Save scrape metadata with timestamp
   saveScrapeMetadata(rootDir, 'kbo', season, allGames);
 
@@ -447,7 +800,7 @@ function saveScrapeMetadata(rootDir, league, season, games) {
     const parts = formatter.formatToParts(now);
     const getP = t => parts.find(p => p.type === t)?.value || '';
     ptString = `${getP('year')}-${getP('month')}-${getP('day')} ${getP('hour')}:${getP('minute')} PT`;
-  } catch (e) {
+  } catch (_e) {
     ptString = now.toISOString();
   }
 
@@ -490,7 +843,7 @@ function saveScrapeMetadata(rootDir, league, season, games) {
         content = content.replace(isoRegex, `$1${now.toISOString()}$3`);
       }
       fs.writeFileSync(scrapeMetaFile, content, 'utf-8');
-    } catch (e) {}
+    } catch (_e) {}
   }
 }
 
