@@ -27033,5 +27033,39 @@
       }
     },
     "isTie": false
+  },
+  {
+    "gamePk": "20261014OBLG0",
+    "gameDate": "2026-10-14T18:30:00+09:00",
+    "officialDate": "2026-10-14",
+    "status": {
+      "detailedState": "Final",
+      "abstractGameState": "F"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 2006,
+          "name": "Doosan Bears",
+          "abbrev": "DOO",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 1,
+        "isWinner": false
+      },
+      "home": {
+        "team": {
+          "id": 2003,
+          "name": "LG Twins",
+          "abbrev": "LG",
+          "league": "KBO",
+          "division": "KBO"
+        },
+        "score": 4,
+        "isWinner": true
+      }
+    },
+    "isTie": false
   }
 ]
