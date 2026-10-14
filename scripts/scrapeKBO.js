@@ -52,10 +52,21 @@ const KBO_REFERER = 'https://www.koreabaseball.com/Schedule/Schedule.aspx';
 export function resolveKboTeam(rawName) {
   if (!rawName) return null;
   const trimmed = rawName.trim();
-  const team = KBO_TEAM_MAPPING[trimmed];
-  if (team) return team;
+  const direct = KBO_TEAM_MAPPING[trimmed];
+  if (direct) return direct;
 
-  // Partial or fuzzy match fallback
+  const lower = trimmed.toLowerCase();
+  for (const team of Object.values(KBO_TEAM_MAPPING)) {
+    if (
+      (team.name && (team.name.toLowerCase() === lower || team.name.toLowerCase().includes(lower) || lower.includes(team.name.toLowerCase()))) ||
+      (team.abbrev && team.abbrev.toLowerCase() === lower) ||
+      (team.nativeName && (team.nativeName === trimmed || trimmed.includes(team.nativeName) || team.nativeName.includes(trimmed)))
+    ) {
+      return team;
+    }
+  }
+
+  // Partial or fuzzy match fallback on mapping keys (e.g. Hangul city/short name like '두산', '삼성')
   for (const [key, val] of Object.entries(KBO_TEAM_MAPPING)) {
     if (trimmed.includes(key) || key.includes(trimmed)) {
       return val;
@@ -78,18 +89,31 @@ async function fetchMonthRaw(season, month, options = {}) {
   const {
     cacheDir = path.join(rootDir, '.kbo_cache'),
     forceRefresh = false,
-    ttlHours = 6
+    ttlHours = 6,
+    srIdList = '0,9,6'
   } = options;
 
   if (!fs.existsSync(cacheDir)) {
     fs.mkdirSync(cacheDir, { recursive: true });
   }
 
-  const cacheFile = path.join(cacheDir, `raw_${season}_${month}.json`);
+  const isPostseasonQuery = srIdList === '3,4,5,7';
   const now = new Date();
   const currentMonthStr = String(now.getMonth() + 1).padStart(2, '0');
   const currentYearStr = String(now.getFullYear());
   const isPastMonth = (season < currentYearStr) || (season === currentYearStr && parseInt(month, 10) < parseInt(currentMonthStr, 10));
+
+  let cacheFile = isPostseasonQuery
+    ? path.join(cacheDir, `raw_${season}_${month}_postseason.json`)
+    : path.join(cacheDir, `raw_${season}_${month}_regular.json`);
+
+  // For immutable past months, fall back to legacy cache file if regular-specific cache doesn't exist yet
+  if (!isPostseasonQuery && !fs.existsSync(cacheFile)) {
+    const legacyCache = path.join(cacheDir, `raw_${season}_${month}.json`);
+    if (fs.existsSync(legacyCache) && isPastMonth) {
+      cacheFile = legacyCache;
+    }
+  }
 
   if (!forceRefresh && fs.existsSync(cacheFile)) {
     try {
@@ -98,7 +122,7 @@ async function fetchMonthRaw(season, month, options = {}) {
 
       // Past months never change and are kept indefinitely; active months expire after ttlHours
       if (isPastMonth || ageHours < ttlHours) {
-        console.log(`  💾 [Cache Hit] ${season}-${month} (${isPastMonth ? 'Immutable past month' : `${ageHours.toFixed(1)}h old < ${ttlHours}h TTL`})`);
+        console.log(`  💾 [Cache Hit] ${season}-${month}${isPostseasonQuery ? ' (Postseason)' : ''} (${isPastMonth ? 'Immutable past month' : `${ageHours.toFixed(1)}h old < ${ttlHours}h TTL`})`);
         const cachedContent = fs.readFileSync(cacheFile, 'utf-8');
         return JSON.parse(cachedContent);
       }
@@ -107,13 +131,13 @@ async function fetchMonthRaw(season, month, options = {}) {
     }
   }
 
-  console.log(`  🌐 [Network Fetch] Requesting ${season}-${month} from KBO web service...`);
+  console.log(`  🌐 [Network Fetch] Requesting ${season}-${month}${isPostseasonQuery ? ' (Postseason)' : ''} from KBO web service...`);
   // Polite courtesy delay before hitting the external server
   await sleep(400);
 
   const formBody = new URLSearchParams({
     leId: '1',
-    srIdList: '0,3,4,5,7,9,6',
+    srIdList,
     seasonId: String(season),
     gameMonth: month,
     teamId: ''
@@ -183,6 +207,30 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
       }
     }
 
+    // Check for postseason series indicator across any cell in the row
+    let isPostseason = false;
+    let seriesType = null;
+    for (const cell of rowCells) {
+      const text = cell.Text || '';
+      if (/WC|와일드카드/i.test(text)) {
+        isPostseason = true;
+        seriesType = 'wildCard';
+        break;
+      } else if (/준PO|준플레이/i.test(text)) {
+        isPostseason = true;
+        seriesType = 'semiPlayoff';
+        break;
+      } else if (/한국시리즈|KS\s*\d*차전/i.test(text)) {
+        isPostseason = true;
+        seriesType = 'koreanSeries';
+        break;
+      } else if (/(?<![A-Za-z])PO\s*\d*차전|(?<!준)플레이오프/i.test(text)) {
+        isPostseason = true;
+        seriesType = 'playoff';
+        break;
+      }
+    }
+
     // Find the matchup & score cell (contains "vs" or Class "play")
     const playCell = rowCells.find(c => (c.Class === 'play' || (c.Text && c.Text.includes('vs'))));
     if (!playCell) return;
@@ -222,6 +270,8 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
         gameDate: `${currentDate}T${gameTime}:00+09:00`,
         officialDate: currentDate,
         status: { detailedState: 'Postponed', abstractGameState: 'F' },
+        isPostseason,
+        ...(seriesType ? { seriesType } : {}),
         teams: {
           away: {
             team: { id: awayTeamMeta.id, name: awayTeamMeta.name, abbrev: awayTeamMeta.abbrev, league: 'KBO', division: 'KBO' },
@@ -264,6 +314,8 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
       gameDate: `${currentDate}T${gameTime}:00+09:00`,
       officialDate: currentDate,
       status: { detailedState: 'Final', abstractGameState: 'F' },
+      isPostseason,
+      ...(seriesType ? { seriesType } : {}),
       teams: {
         away: {
           team: {
@@ -438,8 +490,8 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
       const rawHome = g.home || g.teams?.home?.team?.name || '';
       const awayTeam = resolveKboTeam(rawAway);
       const homeTeam = resolveKboTeam(rawHome);
-      const awayName = awayTeam?.name || (typeof g.away === 'string' ? g.away : 'Away');
-      const homeName = homeTeam?.name || (typeof g.home === 'string' ? g.home : 'Home');
+      const awayName = awayTeam?.name || (typeof g.away === 'string' && g.away ? g.away : '') || g.teams?.away?.team?.name || 'Away';
+      const homeName = homeTeam?.name || (typeof g.home === 'string' && g.home ? g.home : '') || g.teams?.home?.team?.name || 'Home';
       const awayScore = typeof g.awayScore === 'number' ? g.awayScore : (g.teams?.away?.score ?? null);
       const homeScore = typeof g.homeScore === 'number' ? g.homeScore : (g.teams?.home?.score ?? null);
       const isFinal = Boolean(g.isFinal || (g.status && (g.status.detailedState === 'Final' || g.status.abstractGameState === 'F')));
@@ -471,11 +523,26 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
 
       if (winnerId && topId && winnerId === topId) winsTop++;
       else if (winnerId && botId && winnerId === botId) winsBot++;
-      else if (winnerId && homeTeam && winnerId === homeTeam.id) winsTop++;
-      else if (winnerId && awayTeam && winnerId === awayTeam.id) winsBot++;
+      else if (winnerId && awayTeam && awayTeam.id === topId) winsTop++;
+      else if (winnerId && homeTeam && homeTeam.id === topId) winsTop++;
+      else if (winnerId && awayTeam && awayTeam.id === botId) winsBot++;
+      else if (winnerId && homeTeam && homeTeam.id === botId) winsBot++;
     });
 
-    seriesObj.games = parsedGames;
+    // Merge parsed games with scheduled placeholder games to preserve future schedule
+    if (Array.isArray(seriesObj.games) && seriesObj.games.length > 0) {
+      const mergedGames = seriesObj.games.map((origGame, i) => {
+        if (parsedGames[i]) return parsedGames[i];
+        return origGame;
+      });
+      for (let i = seriesObj.games.length; i < parsedGames.length; i++) {
+        mergedGames.push(parsedGames[i]);
+      }
+      seriesObj.games = mergedGames;
+    } else {
+      seriesObj.games = parsedGames;
+    }
+
     if (topTeam) topTeam.wins = winsTop;
     if (botTeam) botTeam.wins = winsBot;
 
@@ -496,8 +563,10 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
 
   if (seasonPostseason.wildCard.isComplete && seasonPostseason.wildCard.winnerId) {
     const wcWinnerId = seasonPostseason.wildCard.winnerId;
-    const wcWinner = wcWinnerId === 2001 ? seasonPostseason.wildCard.team4 : seasonPostseason.wildCard.team5;
-    if (seasonPostseason.semiPlayoff) {
+    const wcWinner = wcWinnerId === seasonPostseason.wildCard.team4?.id
+      ? seasonPostseason.wildCard.team4
+      : seasonPostseason.wildCard.team5;
+    if (seasonPostseason.semiPlayoff && wcWinner) {
       seasonPostseason.semiPlayoff.adv = {
         id: wcWinner.id,
         name: wcWinner.name,
@@ -508,8 +577,8 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
       };
       if (Array.isArray(seasonPostseason.semiPlayoff.games)) {
         seasonPostseason.semiPlayoff.games.forEach(g => {
-          if (g.away === 'Wild Card Winner') g.away = wcWinner.name;
-          if (g.home === 'Wild Card Winner') g.home = wcWinner.name;
+          if (g.away === 'Wild Card Winner' || g.away === seasonPostseason.wildCard.team5?.name) g.away = wcWinner.name;
+          if (g.home === 'Wild Card Winner' || g.home === seasonPostseason.wildCard.team5?.name) g.home = wcWinner.name;
         });
       }
     }
@@ -519,8 +588,10 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
 
   if (seasonPostseason.semiPlayoff.isComplete && seasonPostseason.semiPlayoff.winnerId) {
     const semiWinnerId = seasonPostseason.semiPlayoff.winnerId;
-    const semiWinner = semiWinnerId === seasonPostseason.semiPlayoff.team3?.id ? seasonPostseason.semiPlayoff.team3 : seasonPostseason.semiPlayoff.adv;
-    if (seasonPostseason.playoff) {
+    const semiWinner = semiWinnerId === seasonPostseason.semiPlayoff.team3?.id
+      ? seasonPostseason.semiPlayoff.team3
+      : seasonPostseason.semiPlayoff.adv;
+    if (seasonPostseason.playoff && semiWinner) {
       seasonPostseason.playoff.adv = {
         id: semiWinner.id,
         name: semiWinner.name,
@@ -542,8 +613,10 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
 
   if (seasonPostseason.playoff.isComplete && seasonPostseason.playoff.winnerId) {
     const poWinnerId = seasonPostseason.playoff.winnerId;
-    const poWinner = poWinnerId === seasonPostseason.playoff.team2?.id ? seasonPostseason.playoff.team2 : seasonPostseason.playoff.adv;
-    if (seasonPostseason.koreanSeries) {
+    const poWinner = poWinnerId === seasonPostseason.playoff.team2?.id
+      ? seasonPostseason.playoff.team2
+      : seasonPostseason.playoff.adv;
+    if (seasonPostseason.koreanSeries && poWinner) {
       seasonPostseason.koreanSeries.adv = {
         id: poWinner.id,
         name: poWinner.name,
@@ -565,8 +638,17 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
 
   if (seasonPostseason.koreanSeries.isComplete && seasonPostseason.koreanSeries.winnerId) {
     seasonPostseason.championId = seasonPostseason.koreanSeries.winnerId;
-    seasonPostseason.isComplete = true;
   }
+
+  seasonPostseason.isStarted = Boolean(
+    seasonPostseason.wildCard?.isStarted ||
+    seasonPostseason.semiPlayoff?.isStarted ||
+    seasonPostseason.playoff?.isStarted ||
+    seasonPostseason.koreanSeries?.isStarted
+  );
+  seasonPostseason.isComplete = Boolean(
+    seasonPostseason.koreanSeries?.isComplete
+  );
 
   return { [sStr]: seasonPostseason };
 }
@@ -601,38 +683,74 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
   const { forceRefresh = false } = options;
   console.log(`🇰🇷 Compiling KBO ${season} Regular Season Data...`);
 
-  // Months active in KBO regular season and postseason
-  const months = ['03', '04', '05', '06', '07', '08', '09', '10', '11'];
-  const allGames = [];
+  // Months active in KBO regular season
+  const months = ['03', '04', '05', '06', '07', '08', '09', '10'];
+  const regularSeasonGames = [];
+  const postseasonGames = [];
 
   for (const month of months) {
     try {
-      const data = await fetchMonthRaw(season, month, { forceRefresh });
+      const data = await fetchMonthRaw(season, month, { forceRefresh, srIdList: '0,9,6' });
       const monthGames = parseKboScheduleRows(data.rows || [], season);
-      console.log(`  Month ${month}: parsed ${monthGames.length} valid games`);
-      allGames.push(...monthGames);
+      const reg = monthGames.filter(g => !g.isPostseason);
+      const post = monthGames.filter(g => g.isPostseason);
+      console.log(`  Month ${month}: parsed ${reg.length} regular season games${post.length > 0 ? `, ${post.length} postseason games` : ''}`);
+      regularSeasonGames.push(...reg);
+      postseasonGames.push(...post);
     } catch (err) {
       console.error(`  ❌ Error processing month ${month}:`, err.message);
     }
   }
 
-  // Sort chronologically by officialDate and gamePk
-  allGames.sort((a, b) => {
+  // Sort regular season chronologically by officialDate and gamePk
+  regularSeasonGames.sort((a, b) => {
     if (a.officialDate !== b.officialDate) {
       return a.officialDate.localeCompare(b.officialDate);
     }
     return String(a.gamePk).localeCompare(String(b.gamePk));
   });
 
-  const finalGames = allGames.filter(g => g.status?.detailedState === 'Final');
+  // Dedicated postseason schedule fetch for October and November
+  console.log(`🏆 Compiling KBO ${season} Postseason Data...`);
+  const postseasonMonths = ['10', '11'];
+  for (const month of postseasonMonths) {
+    try {
+      const psData = await fetchMonthRaw(season, month, { forceRefresh, srIdList: '3,4,5,7' });
+      const psMonthGames = parseKboScheduleRows(psData.rows || [], season);
+      psMonthGames.forEach(g => {
+        g.isPostseason = true;
+        if (!postseasonGames.some(existing => existing.gamePk === g.gamePk)) {
+          postseasonGames.push(g);
+        }
+      });
+      console.log(`  Postseason Month ${month}: parsed ${psMonthGames.length} games`);
+    } catch (err) {
+      console.error(`  ❌ Error processing postseason month ${month}:`, err.message);
+    }
+  }
+
+  // Sort postseason games chronologically
+  postseasonGames.sort((a, b) => {
+    if (a.officialDate !== b.officialDate) {
+      return a.officialDate.localeCompare(b.officialDate);
+    }
+    return String(a.gamePk).localeCompare(String(b.gamePk));
+  });
+
+  // Defensively ensure no postseason games leak into regular season dataset
+  const postseasonPks = new Set(postseasonGames.map(g => g.gamePk));
+  const cleanRegularSeasonGames = regularSeasonGames.filter(g => !postseasonPks.has(g.gamePk));
+
+  const finalGames = cleanRegularSeasonGames.filter(g => g.status?.detailedState === 'Final');
   const tieGames = finalGames.filter(g => g.isTie);
 
   console.log(`\n📊 Season Summary (${season}):`);
-  console.log(`   Total Games Recorded: ${allGames.length}`);
-  console.log(`   Final Games Completed: ${finalGames.length}`);
+  console.log(`   Regular Season Games Recorded: ${cleanRegularSeasonGames.length}`);
+  console.log(`   Final Regular Games Completed: ${finalGames.length}`);
   console.log(`   Tie Games: ${tieGames.length}`);
+  console.log(`   Postseason Games Recorded: ${postseasonGames.length}`);
 
-  // Summary per team
+  // Summary per team (Regular Season)
   const teamRecords = {};
   finalGames.forEach(g => {
     const home = g.teams.home;
@@ -688,7 +806,7 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
     }
   });
 
-  const serializedData = JSON.stringify(allGames, null, 2);
+  const serializedData = JSON.stringify(cleanRegularSeasonGames, null, 2);
 
   targets.forEach(targetFile => {
     if (fs.existsSync(targetFile)) {
@@ -730,7 +848,7 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
 
   // Compile & Write Postseason Data
   const sStr = String(season);
-  const postseasonData = parseKboPostseason([], allGames, sStr);
+  const postseasonData = parseKboPostseason(postseasonGames, cleanRegularSeasonGames, sStr);
   const serializedPostseason = JSON.stringify(postseasonData, null, 2);
   const postseasonTargets = [];
   if (fs.existsSync(path.join(rootDir, 'public'))) {
@@ -780,9 +898,9 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
   updateKboPostseasonSeriesDataConstant(rootDir, postseasonData[sStr] || postseasonData['2026']);
 
   // Save scrape metadata with timestamp
-  saveScrapeMetadata(rootDir, 'kbo', season, allGames);
+  saveScrapeMetadata(rootDir, 'kbo', season, cleanRegularSeasonGames);
 
-  return allGames;
+  return cleanRegularSeasonGames;
 }
 
 /**
