@@ -80,7 +80,7 @@
         "id": 2001,
         "name": "KIA Tigers",
         "shortName": "Tigers",
-        "wins": 1,
+        "wins": 2,
         "isWinner": false,
         "isEliminated": false
       },
@@ -109,7 +109,11 @@
           "game": 2,
           "date": "2026-10-18",
           "away": "LG Twins",
-          "home": "KIA Tigers"
+          "home": "KIA Tigers",
+          "awayScore": 3,
+          "homeScore": 6,
+          "winnerId": 2001,
+          "isFinal": true
         },
         {
           "game": 3,
