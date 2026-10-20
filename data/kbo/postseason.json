@@ -80,8 +80,8 @@
         "id": 2001,
         "name": "KIA Tigers",
         "shortName": "Tigers",
-        "wins": 2,
-        "isWinner": false,
+        "wins": 3,
+        "isWinner": true,
         "isEliminated": false
       },
       "adv": {
@@ -90,10 +90,10 @@
         "shortName": "Twins",
         "wins": 0,
         "isWinner": false,
-        "isEliminated": false
+        "isEliminated": true
       },
       "isStarted": true,
-      "isComplete": false,
+      "isComplete": true,
       "games": [
         {
           "game": 1,
@@ -119,7 +119,11 @@
           "game": 3,
           "date": "2026-10-20",
           "away": "KIA Tigers",
-          "home": "LG Twins"
+          "home": "LG Twins",
+          "awayScore": 13,
+          "homeScore": 1,
+          "winnerId": 2001,
+          "isFinal": true
         },
         {
           "game": 4,
@@ -135,7 +139,8 @@
           "home": "KIA Tigers",
           "ifNeeded": true
         }
-      ]
+      ],
+      "winnerId": 2001
     },
     "playoff": {
       "name": "KBO Playoff",
@@ -149,8 +154,9 @@
         "isEliminated": false
       },
       "adv": {
-        "name": "Semi-Playoff Winner",
-        "shortName": "Semi Winner",
+        "id": 2001,
+        "name": "KIA Tigers",
+        "shortName": "Tigers",
         "wins": 0,
         "isWinner": false,
         "isEliminated": false
@@ -161,32 +167,32 @@
         {
           "game": 1,
           "date": "2026-10-25",
-          "away": "Semi-Playoff Winner",
+          "away": "KIA Tigers",
           "home": "Samsung Lions"
         },
         {
           "game": 2,
           "date": "2026-10-26",
-          "away": "Semi-Playoff Winner",
+          "away": "KIA Tigers",
           "home": "Samsung Lions"
         },
         {
           "game": 3,
           "date": "2026-10-28",
           "away": "Samsung Lions",
-          "home": "Semi-Playoff Winner"
+          "home": "KIA Tigers"
         },
         {
           "game": 4,
           "date": "2026-10-29",
           "away": "Samsung Lions",
-          "home": "Semi-Playoff Winner",
+          "home": "KIA Tigers",
           "ifNeeded": true
         },
         {
           "game": 5,
           "date": "2026-10-31",
-          "away": "Semi-Playoff Winner",
+          "away": "KIA Tigers",
           "home": "Samsung Lions",
           "ifNeeded": true
         }
