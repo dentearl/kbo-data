@@ -39,8 +39,14 @@ export const KBO_TEAM_MAPPING = {
   'SS':  { id: 2008, abbrev: 'SAM', name: 'Samsung Lions', nativeName: '삼성 라이온즈' },
   '키움': { id: 2009, abbrev: 'KIW', name: 'Kiwoom Heroes', nativeName: '키움 히어로즈' },
   'WO':  { id: 2009, abbrev: 'KIW', name: 'Kiwoom Heroes', nativeName: '키움 히어로즈' },
+  '우리': { id: 2009, abbrev: 'KIW', name: 'Kiwoom Heroes', nativeName: '키움 히어로즈' },
+  '히어로즈': { id: 2009, abbrev: 'KIW', name: 'Kiwoom Heroes', nativeName: '키움 히어로즈' },
+  '넥센': { id: 2009, abbrev: 'KIW', name: 'Kiwoom Heroes', nativeName: '키움 히어로즈' },
+  'NX':  { id: 2009, abbrev: 'KIW', name: 'Kiwoom Heroes', nativeName: '키움 히어로즈' },
   '한화': { id: 2010, abbrev: 'HAN', name: 'Hanwha Eagles', nativeName: '한화 이글스' },
-  'HH':  { id: 2010, abbrev: 'HAN', name: 'Hanwha Eagles', nativeName: '한화 이글스' }
+  'HH':  { id: 2010, abbrev: 'HAN', name: 'Hanwha Eagles', nativeName: '한화 이글스' },
+  '현대': { id: 2011, abbrev: 'HYU', name: 'Hyundai Unicorns', nativeName: '현대 유니콘스' },
+  'HD':  { id: 2011, abbrev: 'HYU', name: 'Hyundai Unicorns', nativeName: '현대 유니콘스' }
 };
 
 const KBO_ENDPOINT = 'https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList';
@@ -683,8 +689,8 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
   const { forceRefresh = false } = options;
   console.log(`🇰🇷 Compiling KBO ${season} Regular Season Data...`);
 
-  // Months active in KBO regular season
-  const months = ['03', '04', '05', '06', '07', '08', '09', '10'];
+  // Months active in KBO regular season (03-11)
+  const months = ['03', '04', '05', '06', '07', '08', '09', '10', '11'];
   const regularSeasonGames = [];
   const postseasonGames = [];
 
@@ -846,37 +852,38 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
     }
   }
 
-  // Compile & Write Postseason Data
+  // Compile & Write Postseason Data (Active 2026 season)
   const sStr = String(season);
-  const postseasonData = parseKboPostseason(postseasonGames, cleanRegularSeasonGames, sStr);
-  const serializedPostseason = JSON.stringify(postseasonData, null, 2);
-  const postseasonTargets = [];
-  if (fs.existsSync(path.join(rootDir, 'public'))) {
-    postseasonTargets.push(path.join(publicDir, 'postseason.json'));
-  }
-  if (fs.existsSync(path.join(rootDir, 'src'))) {
-    postseasonTargets.push(path.join(srcDataDir, 'postseason.json'));
-  }
-  if (postseasonTargets.length === 0 || fs.existsSync(standaloneDir)) {
-    postseasonTargets.push(path.join(standaloneDir, 'postseason.json'));
-  }
-
-  postseasonTargets.forEach(targetFile => {
-    const parent = path.dirname(targetFile);
-    if (!fs.existsSync(parent)) {
-      fs.mkdirSync(parent, { recursive: true });
+  if (sStr === '2026') {
+    const postseasonData = parseKboPostseason(postseasonGames, cleanRegularSeasonGames, sStr);
+    const serializedPostseason = JSON.stringify(postseasonData, null, 2);
+    const postseasonTargets = [];
+    if (fs.existsSync(path.join(rootDir, 'public'))) {
+      postseasonTargets.push(path.join(publicDir, 'postseason.json'));
     }
-    fs.writeFileSync(targetFile, serializedPostseason, 'utf-8');
-    console.log(`  🏆 [Written] ${path.relative(rootDir, targetFile)} (${(serializedPostseason.length / 1024).toFixed(1)} KB)`);
-  });
+    if (fs.existsSync(path.join(rootDir, 'src'))) {
+      postseasonTargets.push(path.join(srcDataDir, 'postseason.json'));
+    }
+    if (postseasonTargets.length === 0 || fs.existsSync(standaloneDir)) {
+      postseasonTargets.push(path.join(standaloneDir, 'postseason.json'));
+    }
 
-  // Write Postseason Embedded JS
-  if (fs.existsSync(srcDataDir)) {
-    const embeddedPostseasonJsTarget = path.join(srcDataDir, 'postseason.js');
-    const psJsContent = `/**
- * Embedded KBO Postseason Series Dataset
- * Enables zero-server local execution (file:/// protocol) without CORS restrictions.
- */
+    postseasonTargets.forEach(targetFile => {
+      const parent = path.dirname(targetFile);
+      if (!fs.existsSync(parent)) {
+        fs.mkdirSync(parent, { recursive: true });
+      }
+      fs.writeFileSync(targetFile, serializedPostseason, 'utf-8');
+      console.log(`  🏆 [Written] ${path.relative(rootDir, targetFile)} (${(serializedPostseason.length / 1024).toFixed(1)} KB)`);
+    });
+
+    // Write Postseason Embedded JS
+    if (fs.existsSync(srcDataDir)) {
+      const embeddedPostseasonJsTarget = path.join(srcDataDir, 'postseason.js');
+      const psJsContent = `/**
+   * Embedded KBO Postseason Series Dataset
+   * Enables zero-server local execution (file:/// protocol) without CORS restrictions.
+   */
 (function() {
   const postseason = ${serializedPostseason};
   if (typeof window !== "undefined") {
@@ -890,12 +897,13 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
   }
 })();
 `;
-    fs.writeFileSync(embeddedPostseasonJsTarget, psJsContent, 'utf-8');
-    console.log(`  🏆 [Written] ${path.relative(rootDir, embeddedPostseasonJsTarget)} (${(psJsContent.length / 1024).toFixed(1)} KB)`);
-  }
+      fs.writeFileSync(embeddedPostseasonJsTarget, psJsContent, 'utf-8');
+      console.log(`  🏆 [Written] ${path.relative(rootDir, embeddedPostseasonJsTarget)} (${(psJsContent.length / 1024).toFixed(1)} KB)`);
+    }
 
-  // Update src/constants/postseasonSeriesData.js with synced postseason results if file exists
-  updateKboPostseasonSeriesDataConstant(rootDir, postseasonData[sStr] || postseasonData['2026']);
+    // Update src/constants/postseasonSeriesData.js with synced postseason results if file exists
+    updateKboPostseasonSeriesDataConstant(rootDir, postseasonData['2026']);
+  }
 
   // Save scrape metadata with timestamp
   saveScrapeMetadata(rootDir, 'kbo', season, cleanRegularSeasonGames);
@@ -979,7 +987,7 @@ if (process.argv[1] && process.argv[1].endsWith('scrapeKBO.js')) {
       seasons = args[i + 1].split(',').map(s => s.trim()).filter(Boolean);
       i++;
     } else if (args[i] === '--all') {
-      seasons = ['2021', '2022', '2023', '2024', '2025', '2026'];
+      seasons = Array.from({ length: 2026 - 2001 + 1 }, (_, k) => String(2001 + k));
     } else if (args[i] === '--force' || args[i] === '--no-cache') {
       forceRefresh = true;
     }
