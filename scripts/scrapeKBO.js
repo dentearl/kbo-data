@@ -812,7 +812,30 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
     }
   });
 
-  const serializedData = JSON.stringify(cleanRegularSeasonGames, null, 2);
+  // Check if any existing target file has a postseason block to preserve
+  let fileData = cleanRegularSeasonGames;
+  let existingPostseason = null;
+  for (const t of targets) {
+    if (fs.existsSync(t)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(t, 'utf-8'));
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.postseason) {
+          existingPostseason = parsed.postseason;
+          break;
+        }
+      } catch (_e) {}
+    }
+  }
+
+  if (existingPostseason) {
+    fileData = {
+      season: String(season),
+      games: cleanRegularSeasonGames,
+      postseason: existingPostseason
+    };
+  }
+
+  const serializedData = JSON.stringify(fileData, null, 2);
 
   targets.forEach(targetFile => {
     if (fs.existsSync(targetFile)) {
@@ -834,13 +857,26 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
  * Enables zero-server local execution (file:/// protocol) without CORS restrictions.
  */
 (function() {
-  const games = ${serializedData};
+  const dataset = ${serializedData};
+  const games = dataset.games || dataset;
   if (typeof window !== "undefined") {
     window.KBO_STATIC_DATA = window.KBO_STATIC_DATA || {};
     window.KBO_STATIC_DATA["${season}"] = games;
+    if (dataset.postseason) {
+      window.KBO_POSTSEASON_STATIC = window.KBO_POSTSEASON_STATIC || {};
+      window.KBO_POSTSEASON_STATIC["${season}"] = dataset.postseason;
+    }
+  }
+  if (typeof globalThis !== "undefined") {
+    globalThis.KBO_STATIC_DATA = globalThis.KBO_STATIC_DATA || {};
+    globalThis.KBO_STATIC_DATA["${season}"] = games;
+    if (dataset.postseason) {
+      globalThis.KBO_POSTSEASON_STATIC = globalThis.KBO_POSTSEASON_STATIC || {};
+      globalThis.KBO_POSTSEASON_STATIC["${season}"] = dataset.postseason;
+    }
   }
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = games;
+    module.exports = dataset;
   }
 })();
 `;
