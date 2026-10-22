@@ -683,6 +683,54 @@ export function updateKboPostseasonSeriesDataConstant(rootDir, kbo2026Data) {
 }
 
 /**
+ * Safely merges newly scraped KBO postseason data with existing on-disk postseason data.
+ * Prevents downgrading completed series (isComplete: true) or wiping out completed games
+ * if scraping fails or returns an unstarted template.
+ */
+export function mergeKboPostseason(existingData, newData, seasonKey = '2026') {
+  if (!existingData || !existingData[seasonKey]) return newData;
+  if (!newData || !newData[seasonKey]) return existingData;
+
+  const existingSeason = existingData[seasonKey];
+  const newSeason = JSON.parse(JSON.stringify(newData[seasonKey]));
+  const merged = { ...newSeason };
+
+  function mergeSeries(existingSeries, incomingSeries) {
+    if (!existingSeries) return incomingSeries;
+    if (!incomingSeries) return existingSeries;
+
+    const existingGames = Array.isArray(existingSeries.games) ? existingSeries.games : [];
+    const incomingGames = Array.isArray(incomingSeries.games) ? incomingSeries.games : [];
+
+    const existingFinals = existingGames.filter(g => g.isFinal).length;
+    const incomingFinals = incomingGames.filter(g => g.isFinal).length;
+
+    if (existingSeries.isComplete && !incomingSeries.isComplete) {
+      return existingSeries;
+    }
+    if (existingFinals > incomingFinals) {
+      return existingSeries;
+    }
+
+    const res = { ...incomingSeries };
+    ['team1', 'team2', 'team3', 'team4', 'team5', 'adv'].forEach(key => {
+      if (existingSeries[key] && existingSeries[key].id && (!res[key] || !res[key].id)) {
+        res[key] = existingSeries[key];
+      }
+    });
+
+    return res;
+  }
+
+  merged.wildCard = mergeSeries(existingSeason.wildCard, merged.wildCard);
+  merged.semiPlayoff = mergeSeries(existingSeason.semiPlayoff, merged.semiPlayoff);
+  merged.playoff = mergeSeries(existingSeason.playoff, merged.playoff);
+  merged.koreanSeries = mergeSeries(existingSeason.koreanSeries, merged.koreanSeries);
+
+  return { [seasonKey]: merged };
+}
+
+/**
  * Scrapes and compiles full KBO season into static JSON datasets
  */
 export async function scrapeKboSeason(season = '2026', options = {}) {
@@ -745,7 +793,7 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
 
   // Defensively ensure no postseason games leak into regular season dataset
   const postseasonPks = new Set(postseasonGames.map(g => g.gamePk));
-  const cleanRegularSeasonGames = regularSeasonGames.filter(g => !postseasonPks.has(g.gamePk));
+  let cleanRegularSeasonGames = regularSeasonGames.filter(g => !postseasonPks.has(g.gamePk));
 
   const finalGames = cleanRegularSeasonGames.filter(g => g.status?.detailedState === 'Final');
   const tieGames = finalGames.filter(g => g.isTie);
@@ -812,8 +860,32 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
     }
   });
 
+  // Safety guard: if newly scraped games is empty, but an existing target file has games, preserve existing games
+  let gamesToWrite = cleanRegularSeasonGames;
+  if (!Array.isArray(gamesToWrite) || gamesToWrite.length === 0) {
+    let existingGameCount = 0;
+    let existingGamesOnDisk = null;
+    for (const t of targets) {
+      if (fs.existsSync(t)) {
+        try {
+          const parsed = JSON.parse(fs.readFileSync(t, 'utf-8'));
+          const gamesArr = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.games) ? parsed.games : null);
+          if (gamesArr && gamesArr.length > existingGameCount) {
+            existingGameCount = gamesArr.length;
+            existingGamesOnDisk = gamesArr;
+          }
+        } catch (_e) {}
+      }
+    }
+    if (existingGameCount > 0) {
+      console.warn(`  ⚠️ [Safety Guard] Scraped game count is 0, but existing dataset has ${existingGameCount} games. Preserving existing games to prevent data loss.`);
+      gamesToWrite = existingGamesOnDisk;
+      cleanRegularSeasonGames = existingGamesOnDisk;
+    }
+  }
+
   // Check if any existing target file has a postseason block to preserve
-  let fileData = cleanRegularSeasonGames;
+  let fileData = gamesToWrite;
   let existingPostseason = null;
   for (const t of targets) {
     if (fs.existsSync(t)) {
@@ -830,7 +902,7 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
   if (existingPostseason) {
     fileData = {
       season: String(season),
-      games: cleanRegularSeasonGames,
+      games: gamesToWrite,
       postseason: existingPostseason
     };
   }
@@ -891,8 +963,7 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
   // Compile & Write Postseason Data (Active 2026 season)
   const sStr = String(season);
   if (sStr === '2026') {
-    const postseasonData = parseKboPostseason(postseasonGames, cleanRegularSeasonGames, sStr);
-    const serializedPostseason = JSON.stringify(postseasonData, null, 2);
+    let postseasonData = parseKboPostseason(postseasonGames, cleanRegularSeasonGames, sStr);
     const postseasonTargets = [];
     if (fs.existsSync(path.join(rootDir, 'public'))) {
       postseasonTargets.push(path.join(publicDir, 'postseason.json'));
@@ -903,6 +974,26 @@ export async function scrapeKboSeason(season = '2026', options = {}) {
     if (postseasonTargets.length === 0 || fs.existsSync(standaloneDir)) {
       postseasonTargets.push(path.join(standaloneDir, 'postseason.json'));
     }
+
+    // Safety guard: merge with existing on-disk postseason data to avoid clobbering completed series
+    let existingDiskPostseason = null;
+    for (const pt of postseasonTargets) {
+      if (fs.existsSync(pt)) {
+        try {
+          const parsed = JSON.parse(fs.readFileSync(pt, 'utf-8'));
+          if (parsed && parsed['2026']) {
+            existingDiskPostseason = parsed;
+            break;
+          }
+        } catch (_e) {}
+      }
+    }
+
+    if (existingDiskPostseason) {
+      postseasonData = mergeKboPostseason(existingDiskPostseason, postseasonData, '2026');
+    }
+
+    const serializedPostseason = JSON.stringify(postseasonData, null, 2);
 
     postseasonTargets.forEach(targetFile => {
       const parent = path.dirname(targetFile);
