@@ -149,7 +149,7 @@
         "id": 2008,
         "name": "Samsung Lions",
         "shortName": "Lions",
-        "wins": 0,
+        "wins": 1,
         "isWinner": false,
         "isEliminated": false
       },
@@ -176,9 +176,13 @@
         },
         {
           "game": 2,
-          "date": "2026-10-26",
+          "date": "2026-10-27",
           "away": "KIA Tigers",
-          "home": "Samsung Lions"
+          "home": "Samsung Lions",
+          "awayScore": 3,
+          "homeScore": 8,
+          "winnerId": 2008,
+          "isFinal": true
         },
         {
           "game": 3,
