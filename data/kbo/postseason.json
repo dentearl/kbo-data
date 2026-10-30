@@ -157,7 +157,7 @@
         "id": 2001,
         "name": "KIA Tigers",
         "shortName": "Tigers",
-        "wins": 1,
+        "wins": 2,
         "isWinner": false,
         "isEliminated": false
       },
@@ -196,10 +196,13 @@
         },
         {
           "game": 4,
-          "date": "2026-10-29",
+          "date": "2026-10-30",
           "away": "Samsung Lions",
           "home": "KIA Tigers",
-          "ifNeeded": true
+          "awayScore": 2,
+          "homeScore": 4,
+          "winnerId": 2001,
+          "isFinal": true
         },
         {
           "game": 5,
