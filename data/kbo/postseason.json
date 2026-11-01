@@ -149,8 +149,8 @@
         "id": 2008,
         "name": "Samsung Lions",
         "shortName": "Lions",
-        "wins": 2,
-        "isWinner": false,
+        "wins": 3,
+        "isWinner": true,
         "isEliminated": false
       },
       "adv": {
@@ -159,10 +159,10 @@
         "shortName": "Tigers",
         "wins": 2,
         "isWinner": false,
-        "isEliminated": false
+        "isEliminated": true
       },
       "isStarted": true,
-      "isComplete": false,
+      "isComplete": true,
       "games": [
         {
           "game": 1,
@@ -206,12 +206,16 @@
         },
         {
           "game": 5,
-          "date": "2026-10-31",
+          "date": "2026-11-01",
           "away": "KIA Tigers",
           "home": "Samsung Lions",
-          "ifNeeded": true
+          "awayScore": 1,
+          "homeScore": 6,
+          "winnerId": 2008,
+          "isFinal": true
         }
-      ]
+      ],
+      "winnerId": 2008
     },
     "koreanSeries": {
       "name": "Korean Series",
@@ -225,8 +229,9 @@
         "isEliminated": false
       },
       "adv": {
-        "name": "Playoff Winner",
-        "shortName": "PO Winner",
+        "id": 2008,
+        "name": "Samsung Lions",
+        "shortName": "Lions",
         "wins": 0,
         "isWinner": false,
         "isEliminated": false
@@ -237,45 +242,45 @@
         {
           "game": 1,
           "date": "2026-11-02",
-          "away": "Playoff Winner",
+          "away": "Samsung Lions",
           "home": "KT Wiz"
         },
         {
           "game": 2,
           "date": "2026-11-03",
-          "away": "Playoff Winner",
+          "away": "Samsung Lions",
           "home": "KT Wiz"
         },
         {
           "game": 3,
           "date": "2026-11-05",
           "away": "KT Wiz",
-          "home": "Playoff Winner"
+          "home": "Samsung Lions"
         },
         {
           "game": 4,
           "date": "2026-11-06",
           "away": "KT Wiz",
-          "home": "Playoff Winner"
+          "home": "Samsung Lions"
         },
         {
           "game": 5,
           "date": "2026-11-07",
           "away": "KT Wiz",
-          "home": "Playoff Winner",
+          "home": "Samsung Lions",
           "ifNeeded": true
         },
         {
           "game": 6,
           "date": "2026-11-09",
-          "away": "Playoff Winner",
+          "away": "Samsung Lions",
           "home": "KT Wiz",
           "ifNeeded": true
         },
         {
           "game": 7,
           "date": "2026-11-10",
-          "away": "Playoff Winner",
+          "away": "Samsung Lions",
           "home": "KT Wiz",
           "ifNeeded": true
         }
