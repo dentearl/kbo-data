@@ -107,7 +107,10 @@ async function fetchMonthRaw(season, month, options = {}) {
   const now = new Date();
   const currentMonthStr = String(now.getMonth() + 1).padStart(2, '0');
   const currentYearStr = String(now.getFullYear());
-  const isPastMonth = (season < currentYearStr) || (season === currentYearStr && parseInt(month, 10) < parseInt(currentMonthStr, 10));
+  // For the current season, postseason months (October and November) remain dynamic until December
+  const isPastMonth = (season < currentYearStr) ||
+    (!isPostseasonQuery && season === currentYearStr && parseInt(month, 10) < parseInt(currentMonthStr, 10)) ||
+    (isPostseasonQuery && season === currentYearStr && parseInt(currentMonthStr, 10) > 11);
 
   let cacheFile = isPostseasonQuery
     ? path.join(cacheDir, `raw_${season}_${month}_postseason.json`)
@@ -121,14 +124,16 @@ async function fetchMonthRaw(season, month, options = {}) {
     }
   }
 
+  const effectiveTtl = (isPostseasonQuery && season === currentYearStr) ? Math.min(ttlHours, 2) : ttlHours;
+
   if (!forceRefresh && fs.existsSync(cacheFile)) {
     try {
       const stats = fs.statSync(cacheFile);
       const ageHours = (Date.now() - stats.mtimeMs) / (1000 * 60 * 60);
 
-      // Past months never change and are kept indefinitely; active months expire after ttlHours
-      if (isPastMonth || ageHours < ttlHours) {
-        console.log(`  💾 [Cache Hit] ${season}-${month}${isPostseasonQuery ? ' (Postseason)' : ''} (${isPastMonth ? 'Immutable past month' : `${ageHours.toFixed(1)}h old < ${ttlHours}h TTL`})`);
+      // Past months never change and are kept indefinitely; active months expire after effectiveTtl
+      if (isPastMonth || ageHours < effectiveTtl) {
+        console.log(`  💾 [Cache Hit] ${season}-${month}${isPostseasonQuery ? ' (Postseason)' : ''} (${isPastMonth ? 'Immutable past month' : `${ageHours.toFixed(1)}h old < ${effectiveTtl}h TTL`})`);
         const cachedContent = fs.readFileSync(cacheFile, 'utf-8');
         return JSON.parse(cachedContent);
       }
@@ -213,27 +218,28 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
       }
     }
 
-    // Check for postseason series indicator across any cell in the row
+    // Check for postseason series indicator and game number across any cell in the row
     let isPostseason = false;
     let seriesType = null;
+    let gameNumber = null;
     for (const cell of rowCells) {
       const text = cell.Text || '';
       if (/WC|와일드카드/i.test(text)) {
         isPostseason = true;
         seriesType = 'wildCard';
-        break;
       } else if (/준PO|준플레이/i.test(text)) {
         isPostseason = true;
         seriesType = 'semiPlayoff';
-        break;
       } else if (/한국시리즈|KS\s*\d*차전/i.test(text)) {
         isPostseason = true;
         seriesType = 'koreanSeries';
-        break;
       } else if (/(?<![A-Za-z])PO\s*\d*차전|(?<!준)플레이오프/i.test(text)) {
         isPostseason = true;
         seriesType = 'playoff';
-        break;
+      }
+      const roundMatch = text.match(/(?:WC|와일드카드|준PO|준플레이|PO|플레이오프|KS|한국시리즈)\s*(\d+)차전/i);
+      if (roundMatch) {
+        gameNumber = parseInt(roundMatch[1], 10);
       }
     }
 
@@ -250,15 +256,26 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
     });
 
     // Parse team matchup: <span>AWAY</span><em>...</em><span>HOME</span>
-    const teamMatch = playText.match(/<span>([^<]+)<\/span><em>([\s\S]*?)<\/em><span>([^<]+)<\/span>/);
+    // Note: team spans may contain <br/> e.g. <span>PO<br/>승리팀</span>
+    const teamMatch = playText.match(/<span>([\s\S]*?)<\/span><em>([\s\S]*?)<\/em><span>([\s\S]*?)<\/span>/);
     if (!teamMatch) return;
 
-    const rawAwayName = teamMatch[1].trim();
+    const rawAwayName = teamMatch[1].replace(/<[^>]+>/g, '').trim();
     const emContent = teamMatch[2].trim();
-    const rawHomeName = teamMatch[3].trim();
+    const rawHomeName = teamMatch[3].replace(/<[^>]+>/g, '').trim();
 
-    const awayTeamMeta = resolveKboTeam(rawAwayName);
-    const homeTeamMeta = resolveKboTeam(rawHomeName);
+    const placeholderMeta = (name) => ({
+      id: null,
+      name: name.includes('PO') ? 'Playoff Winner' : (name.includes('준') ? 'Semi-Playoff Winner' : (name.includes('WC') ? 'Wild Card Winner' : name)),
+      abbrev: 'TBD',
+      isPlaceholder: true
+    });
+
+    const isPlaceholderAway = isPostseason && /승리팀|Winner|TBD|PO|WC/i.test(rawAwayName);
+    const isPlaceholderHome = isPostseason && /승리팀|Winner|TBD|PO|WC/i.test(rawHomeName);
+
+    const awayTeamMeta = resolveKboTeam(rawAwayName) || (isPlaceholderAway ? placeholderMeta(rawAwayName) : null);
+    const homeTeamMeta = resolveKboTeam(rawHomeName) || (isPlaceholderHome ? placeholderMeta(rawHomeName) : null);
 
     if (!awayTeamMeta || !homeTeamMeta) {
       console.warn(`Could not resolve teams in matchup: "${rawAwayName}" vs "${rawHomeName}"`);
@@ -267,7 +284,7 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
 
     if (!gameId) {
       const cleanDate = currentDate.replace(/-/g, '');
-      gameId = `${cleanDate}_${awayTeamMeta.abbrev}_${homeTeamMeta.abbrev}`;
+      gameId = `${cleanDate}_${awayTeamMeta.abbrev}_${homeTeamMeta.abbrev}${gameNumber ? `_g${gameNumber}` : ''}`;
     }
 
     if (isCancelled) {
@@ -275,6 +292,8 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
         gamePk: gameId,
         gameDate: `${currentDate}T${gameTime}:00+09:00`,
         officialDate: currentDate,
+        time: gameTime,
+        gameNumber,
         status: { detailedState: 'Postponed', abstractGameState: 'F' },
         isPostseason,
         ...(seriesType ? { seriesType } : {}),
@@ -302,7 +321,34 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
     const scoresMatch = emContent.match(/<span[^>]*class=["']?([^"'>]*)["']?[^>]*>(\d+)<\/span>[\s\S]*?<span[^>]*class=["']?([^"'>]*)["']?[^>]*>(\d+)<\/span>/);
 
     if (!scoresMatch) {
-      // Game not yet played or scheduled
+      // Future scheduled game
+      if (isPostseason) {
+        games.push({
+          gamePk: gameId,
+          gameDate: `${currentDate}T${gameTime}:00+09:00`,
+          officialDate: currentDate,
+          time: gameTime,
+          gameNumber,
+          status: { detailedState: 'Scheduled', abstractGameState: 'P' },
+          isPostseason,
+          isFinal: false,
+          isScheduled: true,
+          ...(seriesType ? { seriesType } : {}),
+          teams: {
+            away: {
+              team: { id: awayTeamMeta.id, name: awayTeamMeta.name, abbrev: awayTeamMeta.abbrev, league: 'KBO', division: 'KBO' },
+              score: null,
+              isWinner: false
+            },
+            home: {
+              team: { id: homeTeamMeta.id, name: homeTeamMeta.name, abbrev: homeTeamMeta.abbrev, league: 'KBO', division: 'KBO' },
+              score: null,
+              isWinner: false
+            }
+          },
+          isTie: false
+        });
+      }
       return;
     }
 
@@ -319,8 +365,11 @@ export function parseKboScheduleRows(rows = [], seasonYear = '2026') {
       gamePk: gameId,
       gameDate: `${currentDate}T${gameTime}:00+09:00`,
       officialDate: currentDate,
+      time: gameTime,
+      gameNumber,
       status: { detailedState: 'Final', abstractGameState: 'F' },
       isPostseason,
+      isFinal: true,
       ...(seriesType ? { seriesType } : {}),
       teams: {
         away: {
@@ -404,11 +453,11 @@ export function getDefault2026KboPostseasonData() {
         isStarted: false,
         isComplete: false,
         games: [
-          { game: 1, date: '2026-10-25', away: 'Semi-Playoff Winner', home: 'Samsung Lions' },
-          { game: 2, date: '2026-10-26', away: 'Semi-Playoff Winner', home: 'Samsung Lions' },
-          { game: 3, date: '2026-10-28', away: 'Samsung Lions', home: 'Semi-Playoff Winner' },
-          { game: 4, date: '2026-10-29', away: 'Samsung Lions', home: 'Semi-Playoff Winner', ifNeeded: true },
-          { game: 5, date: '2026-10-31', away: 'Semi-Playoff Winner', home: 'Samsung Lions', ifNeeded: true }
+          { game: 1, date: '2026-10-26', away: 'Semi-Playoff Winner', home: 'Samsung Lions' },
+          { game: 2, date: '2026-10-27', away: 'Semi-Playoff Winner', home: 'Samsung Lions' },
+          { game: 3, date: '2026-10-29', away: 'Samsung Lions', home: 'Semi-Playoff Winner' },
+          { game: 4, date: '2026-10-30', away: 'Samsung Lions', home: 'Semi-Playoff Winner', ifNeeded: true },
+          { game: 5, date: '2026-11-01', away: 'Semi-Playoff Winner', home: 'Samsung Lions', ifNeeded: true }
         ]
       },
       koreanSeries: {
@@ -419,13 +468,13 @@ export function getDefault2026KboPostseasonData() {
         isStarted: false,
         isComplete: false,
         games: [
-          { game: 1, date: '2026-11-02', away: 'Playoff Winner', home: 'KT Wiz' },
-          { game: 2, date: '2026-11-03', away: 'Playoff Winner', home: 'KT Wiz' },
-          { game: 3, date: '2026-11-05', away: 'KT Wiz', home: 'Playoff Winner' },
-          { game: 4, date: '2026-11-06', away: 'KT Wiz', home: 'Playoff Winner' },
-          { game: 5, date: '2026-11-07', away: 'KT Wiz', home: 'Playoff Winner', ifNeeded: true },
-          { game: 6, date: '2026-11-09', away: 'Playoff Winner', home: 'KT Wiz', ifNeeded: true },
-          { game: 7, date: '2026-11-10', away: 'Playoff Winner', home: 'KT Wiz', ifNeeded: true }
+          { game: 1, date: '2026-11-03', away: 'Playoff Winner', home: 'KT Wiz' },
+          { game: 2, date: '2026-11-04', away: 'Playoff Winner', home: 'KT Wiz' },
+          { game: 3, date: '2026-11-06', away: 'KT Wiz', home: 'Playoff Winner' },
+          { game: 4, date: '2026-11-07', away: 'KT Wiz', home: 'Playoff Winner' },
+          { game: 5, date: '2026-11-08', away: 'KT Wiz', home: 'Playoff Winner', ifNeeded: true },
+          { game: 6, date: '2026-11-10', away: 'Playoff Winner', home: 'KT Wiz', ifNeeded: true },
+          { game: 7, date: '2026-11-11', away: 'Playoff Winner', home: 'KT Wiz', ifNeeded: true }
         ]
       }
     }
@@ -491,13 +540,35 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
     const topTeam = seriesObj[topTeamProp];
     const botTeam = seriesObj[botTeamProp];
 
-    gamesList.forEach((g, idx) => {
+    // Filter out postponed/cancelled games
+    const activeGames = gamesList.filter(g => !g.isCancelled && g.status?.detailedState !== 'Postponed');
+
+    // Sort active games chronologically and by game number
+    activeGames.sort((a, b) => {
+      const dtA = a.officialDate || a.date || (a.gameDate ? a.gameDate.slice(0, 10) : '');
+      const dtB = b.officialDate || b.date || (b.gameDate ? b.gameDate.slice(0, 10) : '');
+      if (dtA !== dtB) return dtA.localeCompare(dtB);
+      return (a.gameNumber || 0) - (b.gameNumber || 0);
+    });
+
+    activeGames.forEach((g, idx) => {
       const rawAway = g.away || g.teams?.away?.team?.name || '';
       const rawHome = g.home || g.teams?.home?.team?.name || '';
-      const awayTeam = resolveKboTeam(rawAway);
-      const homeTeam = resolveKboTeam(rawHome);
-      const awayName = awayTeam?.name || (typeof g.away === 'string' && g.away ? g.away : '') || g.teams?.away?.team?.name || 'Away';
-      const homeName = homeTeam?.name || (typeof g.home === 'string' && g.home ? g.home : '') || g.teams?.home?.team?.name || 'Home';
+      let awayTeam = resolveKboTeam(rawAway);
+      let homeTeam = resolveKboTeam(rawHome);
+      let awayName = awayTeam?.name || (typeof g.away === 'string' && g.away ? g.away : '') || g.teams?.away?.team?.name || 'Away';
+      let homeName = homeTeam?.name || (typeof g.home === 'string' && g.home ? g.home : '') || g.teams?.home?.team?.name || 'Home';
+
+      // Substitute advancing team name if matchup has placeholder
+      if ((!awayTeam || awayName.includes('Winner') || awayName.includes('승리팀')) && botTeam?.name && !botTeam.name.includes('Winner')) {
+        awayName = botTeam.name;
+        awayTeam = resolveKboTeam(awayName);
+      }
+      if ((!homeTeam || homeName.includes('Winner') || homeName.includes('승리팀')) && botTeam?.name && !botTeam.name.includes('Winner')) {
+        homeName = botTeam.name;
+        homeTeam = resolveKboTeam(homeName);
+      }
+
       const awayScore = typeof g.awayScore === 'number' ? g.awayScore : (g.teams?.away?.score ?? null);
       const homeScore = typeof g.homeScore === 'number' ? g.homeScore : (g.teams?.home?.score ?? null);
       const isFinal = Boolean(g.isFinal || (g.status && (g.status.detailedState === 'Final' || g.status.abstractGameState === 'F')));
@@ -513,15 +584,21 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
         winnerId = g.winnerId;
       }
 
+      const gmNum = g.gameNumber || idx + 1;
+      const origGame = Array.isArray(seriesObj.games) ? seriesObj.games.find(og => og.game === gmNum) : null;
+      const ifNeeded = origGame?.ifNeeded || (winsNeeded === 2 && gmNum > 1) || (winsNeeded === 3 && gmNum > 3) || (winsNeeded === 4 && gmNum > 4);
+
       parsedGames.push({
-        game: idx + 1,
-        date: g.officialDate || g.date,
+        game: gmNum,
+        date: g.officialDate || g.date || (g.gameDate ? g.gameDate.slice(0, 10) : origGame?.date),
+        ...(g.time ? { time: g.time } : (origGame?.time ? { time: origGame.time } : {})),
         away: awayName,
         home: homeName,
         awayScore,
         homeScore,
         winnerId,
-        isFinal
+        isFinal,
+        ...(ifNeeded ? { ifNeeded: true } : {})
       });
 
       const topId = topTeam?.id;
@@ -535,20 +612,6 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
       else if (winnerId && homeTeam && homeTeam.id === botId) winsBot++;
     });
 
-    // Merge parsed games with scheduled placeholder games to preserve future schedule
-    if (Array.isArray(seriesObj.games) && seriesObj.games.length > 0) {
-      const mergedGames = seriesObj.games.map((origGame, i) => {
-        if (parsedGames[i]) return parsedGames[i];
-        return origGame;
-      });
-      for (let i = seriesObj.games.length; i < parsedGames.length; i++) {
-        mergedGames.push(parsedGames[i]);
-      }
-      seriesObj.games = mergedGames;
-    } else {
-      seriesObj.games = parsedGames;
-    }
-
     if (topTeam) topTeam.wins = winsTop;
     if (botTeam) botTeam.wins = winsBot;
 
@@ -557,11 +620,37 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
       seriesObj.winnerId = topTeam?.id;
       if (topTeam) topTeam.isWinner = true;
       if (botTeam) botTeam.isEliminated = true;
+      // Truncate to only played games when series is complete
+      seriesObj.games = parsedGames.filter(g => g.isFinal);
     } else if (winsBot >= winsNeeded) {
       seriesObj.isComplete = true;
       seriesObj.winnerId = botTeam?.id;
       if (botTeam) botTeam.isWinner = true;
       if (topTeam) topTeam.isEliminated = true;
+      // Truncate to only played games when series is complete
+      seriesObj.games = parsedGames.filter(g => g.isFinal);
+    } else {
+      // Series is active: merge live scheduled and completed games with template
+      if (Array.isArray(seriesObj.games) && seriesObj.games.length > 0) {
+        const mergedGames = seriesObj.games.map((origGame, i) => {
+          const matchingParsed = parsedGames.find(pg => pg.game === origGame.game) || parsedGames[i];
+          if (matchingParsed) return matchingParsed;
+          return {
+            ...origGame,
+            away: (origGame.away.includes('Winner') && botTeam?.name && !botTeam.name.includes('Winner')) ? botTeam.name : origGame.away,
+            home: (origGame.home.includes('Winner') && botTeam?.name && !botTeam.name.includes('Winner')) ? botTeam.name : origGame.home
+          };
+        });
+        parsedGames.forEach(pg => {
+          if (!mergedGames.some(mg => mg.game === pg.game)) {
+            mergedGames.push(pg);
+          }
+        });
+        mergedGames.sort((a, b) => a.game - b.game);
+        seriesObj.games = mergedGames;
+      } else {
+        seriesObj.games = parsedGames;
+      }
     }
   }
 
@@ -641,6 +730,16 @@ export function parseKboPostseason(postseasonGames = [], _regularSeasonGames = [
   }
 
   processSeries(seasonPostseason.koreanSeries, ksGames, 4, false, 'team1', 'adv');
+
+  if (seasonPostseason.koreanSeries && seasonPostseason.koreanSeries.adv && Array.isArray(seasonPostseason.koreanSeries.games)) {
+    const advName = seasonPostseason.koreanSeries.adv.name;
+    if (advName && !advName.includes('Winner')) {
+      seasonPostseason.koreanSeries.games.forEach(g => {
+        if (g.away === 'Playoff Winner' || g.away === 'PO Winner' || g.away.includes('Winner') || g.away === 'TBD') g.away = advName;
+        if (g.home === 'Playoff Winner' || g.home === 'PO Winner' || g.home.includes('Winner') || g.home === 'TBD') g.home = advName;
+      });
+    }
+  }
 
   if (seasonPostseason.koreanSeries.isComplete && seasonPostseason.koreanSeries.winnerId) {
     seasonPostseason.championId = seasonPostseason.koreanSeries.winnerId;
