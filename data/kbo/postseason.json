@@ -222,7 +222,7 @@
         "id": 2008,
         "name": "Samsung Lions",
         "shortName": "Lions",
-        "wins": 1,
+        "wins": 2,
         "isWinner": false,
         "isEliminated": false
       },
@@ -257,10 +257,10 @@
           "time": "18:30",
           "away": "KT Wiz",
           "home": "Samsung Lions",
-          "awayScore": null,
-          "homeScore": null,
-          "winnerId": null,
-          "isFinal": false
+          "awayScore": 1,
+          "homeScore": 5,
+          "winnerId": 2008,
+          "isFinal": true
         },
         {
           "game": 4,
