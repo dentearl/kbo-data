@@ -2,7 +2,7 @@
   "2026": {
     "era": "kbo_stepladder",
     "isStarted": true,
-    "isComplete": false,
+    "isComplete": true,
     "seeds": {
       "1": {
         "id": 2002,
@@ -216,18 +216,18 @@
         "shortName": "Wiz",
         "wins": 1,
         "isWinner": false,
-        "isEliminated": false
+        "isEliminated": true
       },
       "adv": {
         "id": 2008,
         "name": "Samsung Lions",
         "shortName": "Lions",
-        "wins": 3,
-        "isWinner": false,
+        "wins": 4,
+        "isWinner": true,
         "isEliminated": false
       },
       "isStarted": true,
-      "isComplete": false,
+      "isComplete": true,
       "games": [
         {
           "game": 1,
@@ -279,37 +279,15 @@
           "time": "14:00",
           "away": "KT Wiz",
           "home": "Samsung Lions",
-          "awayScore": null,
-          "homeScore": null,
-          "winnerId": null,
-          "isFinal": false,
-          "ifNeeded": true
-        },
-        {
-          "game": 6,
-          "date": "2026-11-10",
-          "time": "18:30",
-          "away": "Samsung Lions",
-          "home": "KT Wiz",
-          "awayScore": null,
-          "homeScore": null,
-          "winnerId": null,
-          "isFinal": false,
-          "ifNeeded": true
-        },
-        {
-          "game": 7,
-          "date": "2026-11-11",
-          "time": "18:30",
-          "away": "Samsung Lions",
-          "home": "KT Wiz",
-          "awayScore": null,
-          "homeScore": null,
-          "winnerId": null,
-          "isFinal": false,
+          "awayScore": 1,
+          "homeScore": 12,
+          "winnerId": 2008,
+          "isFinal": true,
           "ifNeeded": true
         }
-      ]
-    }
+      ],
+      "winnerId": 2008
+    },
+    "championId": 2008
   }
 }
